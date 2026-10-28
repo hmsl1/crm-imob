@@ -48,6 +48,9 @@ export default function Imoveis({ usuario, pagina, onPagina }) {
 
   useEffect(() => {
     carregar()
+    // nome do corretor alterado em "Meu perfil": recarrega a lista
+    window.addEventListener('corretor-atualizado', carregar)
+    return () => window.removeEventListener('corretor-atualizado', carregar)
   }, [carregar])
 
   const filtrados = useMemo(() => {
@@ -194,6 +197,7 @@ export default function Imoveis({ usuario, pagina, onPagina }) {
         <ImovelDetalhes
           imovel={imovelAberto}
           corretores={corretores}
+          somenteLeitura={Boolean(imovelAberto.owner_id) && imovelAberto.owner_id !== usuario.id}
           aba={abaDetalhe}
           onAba={setAbaDetalhe}
           onFechar={() => setAberto(null)}

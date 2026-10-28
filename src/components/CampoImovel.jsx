@@ -7,11 +7,11 @@ import Opcoes from './Opcoes.jsx'
 
 // Um campo na tela de detalhes: mostra o valor com um lápis ao lado. Clicando no lápis, só esse
 // campo vira editável; ao salvar, só as colunas dele são gravadas.
-export default function CampoImovel({ campo, imovel, corretores, editando, onEditar, onCancelar, onSalvo }) {
+export default function CampoImovel({ campo, imovel, corretores, editando, somenteLeitura = false, onEditar, onCancelar, onSalvo }) {
   const editor = editando && (
     <EditorCampo campo={campo} imovel={imovel} corretores={corretores} onCancelar={onCancelar} onSalvo={onSalvo} />
   )
-  const lapis = !editando && (
+  const lapis = !editando && !somenteLeitura && (
     <button type="button" className="lapis" aria-label={`Editar ${campo.rotulo}`} title="Editar este campo" onClick={onEditar}>
       ✎
     </button>

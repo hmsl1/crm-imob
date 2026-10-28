@@ -1,3 +1,8 @@
+-- Migração 004 — perfil de busca do lead, lembretes de retorno e agenda de visitas
+-- Rode DEPOIS das migrações anteriores. Pode ser repetida sem erro.
+--
+-- O vínculo lead <-> imóvel usa a tabela "lead_imovel", que já existe desde o schema.sql.
+
 -- ---------------------------------------------------------------
 -- 1) Perfil de busca do lead
 -- ---------------------------------------------------------------

@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase.js'
 import { agendaPorFaixa } from '../lib/agenda.js'
 import { STATUS_VISITA, montarMensagem, quandoCurto } from '../lib/lead.js'
 import { abrirWhatsapp } from '../lib/whatsapp.js'
-import { useNomeDoCorretor } from '../lib/useDadosDoLead.js'
+import { useNomeDoCorretor } from '../lib/corretor.js'
 import Topo from './Topo.jsx'
 import LeadModal from './LeadModal.jsx'
 
@@ -16,7 +16,7 @@ export default function Agenda({ usuario, pagina, onPagina }) {
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')
   const [aberto, setAberto] = useState(null) // { lead, aba }
-  const corretor = useNomeDoCorretor(usuario)
+  const { nome: corretor } = useNomeDoCorretor(usuario)
 
   const carregar = useCallback(async () => {
     const [v, l] = await Promise.all([

@@ -10,7 +10,7 @@ const rotulo = (lista, id) => lista.find((i) => i.id === id)?.rotulo ?? id
 
 // Visualização do imóvel em abas (as mesmas do formulário). Cada campo tem um lápis para editar
 // só aquele campo; o botão "Editar" abre o formulário completo.
-export default function ImovelDetalhes({ imovel, corretores, aba, onAba, onFechar, onEditar, onAtualizado }) {
+export default function ImovelDetalhes({ imovel, corretores, somenteLeitura = false, aba, onAba, onFechar, onEditar, onAtualizado }) {
   const { saindo, fechar } = useFechamentoAnimado()
   const [atual, setAtual] = useState(0) // foto exibida na galeria
   const [editando, setEditando] = useState(null) // id do campo em edição
@@ -52,6 +52,7 @@ export default function ImovelDetalhes({ imovel, corretores, aba, onAba, onFecha
       imovel={imovel}
       corretores={corretores}
       editando={editando === campo.id}
+      somenteLeitura={somenteLeitura}
       onEditar={() => setEditando(campo.id)}
       onCancelar={() => setEditando(null)}
       onSalvo={(atualizado) => {
@@ -79,14 +80,18 @@ export default function ImovelDetalhes({ imovel, corretores, aba, onAba, onFecha
           </div>
           <div className="acoes-detalhe">
             <button onClick={() => setCompartilhando(true)}>Compartilhar</button>
-            <button className="primario" onClick={() => fechar(onEditar)}>
-              Editar
-            </button>
+            {!somenteLeitura && (
+              <button className="primario" onClick={() => fechar(onEditar)}>
+                Editar
+              </button>
+            )}
             <button className="link" onClick={() => fechar(onFechar)} aria-label="Fechar">
               ✕
             </button>
           </div>
         </div>
+
+        {somenteLeitura && <p className="aviso-leitura">Imóvel cadastrado por outro usuário: você pode consultar e compartilhar a ficha, mas só quem cadastrou pode alterar.</p>}
 
         <div className="detalhe-precos">
           {precos.length === 0 ? (
@@ -126,9 +131,11 @@ export default function ImovelDetalhes({ imovel, corretores, aba, onAba, onFecha
           <section className="secao">
             <div className="secao-cabecalho">
               <h3>Fotos</h3>
-              <button type="button" className="pequeno" onClick={() => fechar(() => onEditar('fotos'))}>
-                Gerenciar fotos
-              </button>
+              {!somenteLeitura && (
+                <button type="button" className="pequeno" onClick={() => fechar(() => onEditar('fotos'))}>
+                  Gerenciar fotos
+                </button>
+              )}
             </div>
             <div className="galeria">
               <div className="galeria-principal">

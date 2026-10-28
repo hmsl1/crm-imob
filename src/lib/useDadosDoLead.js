@@ -1,7 +1,6 @@
 // Carrega do Supabase tudo o que fica "em volta" do lead: imóveis vinculados, visitas, lembretes, histórico.
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from './supabase.js'
-import { nomeDoEmail } from './format.js'
 
 const VAZIO = { vinculos: [], visitas: [], lembretes: [], interacoes: [], imoveis: [] }
 
@@ -35,18 +34,4 @@ export function useDadosDoLead(leadId) {
   }, [recarregar])
 
   return { ...dados, erro, recarregar }
-}
-
-// Nome que assina as mensagens: o corretor "próprio" do usuário (ou, na falta, derivado do e-mail)
-export function useNomeDoCorretor(usuario) {
-  const [nome, setNome] = useState(nomeDoEmail(usuario?.email))
-  useEffect(() => {
-    supabase
-      .from('corretores')
-      .select('nome')
-      .eq('e_proprio', true)
-      .maybeSingle()
-      .then(({ data }) => data?.nome && setNome(data.nome))
-  }, [])
-  return nome
 }

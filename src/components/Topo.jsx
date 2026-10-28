@@ -1,5 +1,8 @@
 import { supabase } from '../lib/supabase.js'
+import { useState } from 'react'
 import Marca from './Marca.jsx'
+import PerfilModal from './PerfilModal.jsx'
+import { useNomeDoCorretor } from '../lib/corretor.js'
 
 const PAGINAS = [
   { id: 'leads', rotulo: 'Leads' },
@@ -9,7 +12,10 @@ const PAGINAS = [
 
 // Barra superior compartilhada. As ações específicas de cada página entram como children.
 export default function Topo({ usuario, pagina, onPagina, children }) {
+  const { nome, cadastrado } = useNomeDoCorretor(usuario)
+  const [perfil, setPerfil] = useState(false)
   return (
+    <>
     <header className="topo">
       <Marca />
       <nav className="menu">
@@ -25,10 +31,18 @@ export default function Topo({ usuario, pagina, onPagina, children }) {
         ))}
       </nav>
       <div className="acoes-topo">{children}</div>
-      <span className="usuario">{usuario.email}</span>
+      <button
+        className="link usuario"
+        onClick={() => setPerfil(true)}
+        title={cadastrado ? usuario.email : 'Defina seu nome (hoje vem do e-mail)'}
+      >
+        {nome}
+      </button>
       <button className="link" onClick={() => supabase.auth.signOut()}>
         Sair
       </button>
     </header>
+    {perfil && <PerfilModal usuario={usuario} nomeAtual={cadastrado ? nome : ''} onFechar={() => setPerfil(false)} />}
+    </>
   )
 }

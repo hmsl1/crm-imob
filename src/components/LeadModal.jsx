@@ -10,7 +10,8 @@ import {
   validarLead,
 } from '../lib/lead.js'
 import { useFechamentoAnimado } from '../lib/useFechamentoAnimado.js'
-import { useDadosDoLead, useNomeDoCorretor } from '../lib/useDadosDoLead.js'
+import { useDadosDoLead } from '../lib/useDadosDoLead.js'
+import { useNomeDoCorretor } from '../lib/corretor.js'
 import Opcoes from './Opcoes.jsx'
 import LeadImoveis from './LeadImoveis.jsx'
 import LeadContato from './LeadContato.jsx'
@@ -36,7 +37,7 @@ export default function LeadModal({ lead, usuario, abaInicial = 'dados', onFecha
   const { saindo, fechar } = useFechamentoAnimado()
 
   const dados = useDadosDoLead(lead?.id)
-  const corretor = useNomeDoCorretor(usuario)
+  const { nome: corretor } = useNomeDoCorretor(usuario)
 
   const campo = (nome) => (e) =>
     setForm((f) => ({

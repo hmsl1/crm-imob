@@ -5,12 +5,24 @@ import Topo from './Topo.jsx'
 import { linkWhatsapp } from '../lib/format.js'
 import { rotuloOrigem, quandoCurto, faixaDoDia } from '../lib/lead.js'
 import { proximosPorLead } from '../lib/agenda.js'
+import { filtrarLeads } from '../lib/leadLista.js'
+import LeadLista from './LeadLista.jsx'
+
+const CHAVE_VISAO = 'crm:visao-leads'
+const lerVisao = () => {
+  try {
+    return localStorage.getItem(CHAVE_VISAO) === 'lista' ? 'lista' : 'quadro'
+  } catch {
+    return 'quadro'
+  }
+}
 
 export default function Kanban({ usuario, pagina, onPagina }) {
   const [leads, setLeads] = useState([])
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')
   const [busca, setBusca] = useState('')
+  const [visao, setVisao] = useState(lerVisao) // 'quadro' | 'lista'
   const [arrastando, setArrastando] = useState(null)
   const [colunaAlvo, setColunaAlvo] = useState(null)
   const [aberto, setAberto] = useState(null) // null | { lead, aba }
@@ -39,13 +51,16 @@ export default function Kanban({ usuario, pagina, onPagina }) {
     carregar()
   }, [carregar])
 
-  const filtrados = useMemo(() => {
-    const termo = busca.trim().toLowerCase()
-    if (!termo) return leads
-    return leads.filter((l) =>
-      [l.nome, l.telefone, l.email].some((v) => v && v.toLowerCase().includes(termo))
-    )
-  }, [leads, busca])
+  const filtrados = useMemo(() => filtrarLeads(leads, { busca }), [leads, busca])
+
+  function mudarVisao(nova) {
+    setVisao(nova)
+    try {
+      localStorage.setItem(CHAVE_VISAO, nova)
+    } catch {
+      /* sem armazenamento: só não lembra a escolha */
+    }
+  }
 
   const porEtapa = useMemo(() => {
     const mapa = Object.fromEntries(ETAPAS.map((e) => [e.id, []]))
@@ -79,10 +94,19 @@ export default function Kanban({ usuario, pagina, onPagina }) {
         <input
           className="busca"
           type="search"
-          placeholder="Buscar por nome, telefone ou e-mail"
+          placeholder="Buscar nome, telefone…"
+          title="Busca por nome, telefone, e-mail ou observações"
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
         />
+        <div className="visoes" role="group" aria-label="Forma de exibição">
+          <button type="button" className={visao === 'quadro' ? 'ativo' : ''} aria-pressed={visao === 'quadro'} onClick={() => mudarVisao('quadro')}>
+            Quadro
+          </button>
+          <button type="button" className={visao === 'lista' ? 'ativo' : ''} aria-pressed={visao === 'lista'} onClick={() => mudarVisao('lista')}>
+            Lista
+          </button>
+        </div>
         <button className="primario" onClick={() => setAberto({ lead: null, aba: 'dados' })}>
           + Novo lead
         </button>
@@ -91,6 +115,8 @@ export default function Kanban({ usuario, pagina, onPagina }) {
       {erro && <p className="erro faixa">{erro}</p>}
       {carregando ? (
         <div className="centro">Carregando leads…</div>
+      ) : visao === 'lista' ? (
+        <LeadLista leads={leads} busca={busca} onAbrir={(lead) => setAberto({ lead, aba: 'dados' })} />
       ) : (
         <main className="quadro">
           {ETAPAS.map((etapa) => {

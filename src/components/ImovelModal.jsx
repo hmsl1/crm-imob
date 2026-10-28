@@ -18,8 +18,9 @@ import {
   validarImovel,
 } from '../lib/imovel.js'
 import { nomeDoEmail } from '../lib/format.js'
-import { enviarFoto, apagarFotos, MAX_FOTOS } from '../lib/imagens.js'
+import { enviarFoto, apagarFotos, moverFoto, MAX_FOTOS } from '../lib/imagens.js'
 import { useFechamentoAnimado } from '../lib/useFechamentoAnimado.js'
+import { lerRascunho, salvarRascunho, limparRascunho, temConteudo } from '../lib/rascunho.js'
 import Opcoes from './Opcoes.jsx'
 
 const NOVO_CORRETOR = '__novo__'
@@ -56,11 +57,17 @@ function GrupoChecks({ titulo, itens, marcados, onAlternar }) {
 
 export default function ImovelModal({ imovel, usuario, abaInicial, onFechar, onSalvo }) {
   const editando = Boolean(imovel)
-  const [form, setForm] = useState(() => formDoImovel(imovel))
-  const [aba, setAba] = useState(abaInicial ?? 'principal')
+  // Novo imóvel: recupera o rascunho salvo automaticamente (se houver). Edição não usa rascunho.
+  const [rascunho] = useState(() => (imovel ? null : lerRascunho(usuario.id)))
+  const [form, setForm] = useState(() => rascunho?.form ?? formDoImovel(imovel))
+  const [aba, setAba] = useState(abaInicial ?? rascunho?.aba ?? 'principal')
   const [corretores, setCorretores] = useState([])
-  const [fotos, setFotos] = useState(imovel?.fotos ?? [])
-  const [novas, setNovas] = useState([]) // enviadas nesta sessão e ainda não salvas
+  const [fotos, setFotos] = useState(rascunho?.fotos ?? imovel?.fotos ?? [])
+  const [recuperadoEm, setRecuperadoEm] = useState(rascunho?.salvoEm ?? null)
+  const [salvoAutoEm, setSalvoAutoEm] = useState(null)
+  const [arrastandoFoto, setArrastandoFoto] = useState(null)
+  const [alvoFoto, setAlvoFoto] = useState(null)
+  const [novas, setNovas] = useState(rascunho?.novas ?? []) // enviadas e ainda não salvas no imóvel
   const [enviando, setEnviando] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
@@ -81,6 +88,16 @@ export default function ImovelModal({ imovel, usuario, abaInicial, onFechar, onS
       [chave]: f[chave].includes(id) ? f[chave].filter((x) => x !== id) : [...f[chave], id],
     }))
 
+  // Salvamento automático do rascunho (só em novo imóvel), logo após cada alteração
+  useEffect(() => {
+    if (editando) return
+    const t = setTimeout(() => {
+      if (salvarRascunho(usuario.id, { form, fotos, novas, aba })) setSalvoAutoEm(Date.now())
+      else setSalvoAutoEm(null)
+    }, 500)
+    return () => clearTimeout(t)
+  }, [editando, usuario.id, form, fotos, novas, aba])
+
   // Corretores: carrega a lista; se a conta ainda não tem nenhum, cria o corretor do próprio usuário
   useEffect(() => {
     let ativo = true
@@ -88,6 +105,7 @@ export default function ImovelModal({ imovel, usuario, abaInicial, onFechar, onS
       supabase
         .from('corretores')
         .select('*')
+        .eq('owner_id', usuario.id) // só os corretores desta conta (a tabela é legível por todos)
         .eq('ativo', true)
         .order('e_proprio', { ascending: false })
         .order('nome')
@@ -174,12 +192,40 @@ export default function ImovelModal({ imovel, usuario, abaInicial, onFechar, onS
     }
   }
 
+  // Reordenar: arrastar uma miniatura para cima de outra, ou usar as setas (funciona no teclado e no celular)
+  function moverFotoPara(de, para) {
+    setFotos((f) => moverFoto(f, de, para))
+  }
+
   function tornarCapa(url) {
     setFotos((f) => [url, ...f.filter((u) => u !== url)])
   }
 
+  function descartarRascunho() {
+    if (!window.confirm('Descartar este cadastro? O que você preencheu e as fotos enviadas serão apagados.')) return
+    limparRascunho(usuario.id)
+    setForm((f) => ({ ...formDoImovel(null), corretor_id: f.corretor_id }))
+    setRecuperadoEm(null)
+    setSalvoAutoEm(null)
+    setAba('principal')
+    if (novas.length) apagarFotos(novas).catch(() => {})
+    setFotos([])
+    setNovas([])
+  }
+
+  // Fechar (✕, fora da janela ou Cancelar). Em imóvel novo com conteúdo, pede confirmação antes de perder o cadastro.
   async function cancelar() {
+    if (!editando && temConteudo(form, fotos)) {
+      if (!window.confirm('Descartar este cadastro? O que você preencheu e as fotos enviadas serão apagados.')) return
+    }
+    if (!editando) limparRascunho(usuario.id)
     if (novas.length) await apagarFotos(novas).catch(() => {})
+    fechar(onFechar)
+  }
+
+  // Fecha mantendo o rascunho (e as fotos já enviadas) para continuar depois
+  function fecharMantendoRascunho() {
+    salvarRascunho(usuario.id, { form, fotos, novas, aba })
     fechar(onFechar)
   }
 
@@ -206,6 +252,7 @@ export default function ImovelModal({ imovel, usuario, abaInicial, onFechar, onS
       return
     }
 
+    if (!editando) limparRascunho(usuario.id)
     const removidas = (imovel?.fotos ?? []).filter((u) => !fotos.includes(u))
     if (removidas.length) apagarFotos(removidas).catch(() => {})
     fechar(onSalvo)
@@ -231,6 +278,15 @@ export default function ImovelModal({ imovel, usuario, abaInicial, onFechar, onS
             ✕
           </button>
         </div>
+
+        {!editando && recuperadoEm && (
+          <div className="rascunho-aviso" role="status">
+            <span>Rascunho recuperado (salvo em {new Date(recuperadoEm).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}).</span>
+            <button type="button" className="link pequeno" onClick={descartarRascunho}>
+              Descartar e começar do zero
+            </button>
+          </div>
+        )}
 
         <div className="abas" role="tablist">
           {ABAS_IMOVEL.map((a) => (
@@ -496,13 +552,53 @@ export default function ImovelModal({ imovel, usuario, abaInicial, onFechar, onS
             <>
               <div className="fotos">
                 <span className="rotulo-fotos">
-                  Fotos ({fotos.length}/{MAX_FOTOS}). A primeira é a capa
+                  Fotos ({fotos.length}/{MAX_FOTOS}). A primeira é a capa. Arraste ou use as setas para reordenar
                 </span>
                 {fotos.length > 0 && (
                   <div className="fotos-grade">
                     {fotos.map((url, idx) => (
-                      <div className="miniatura" key={url}>
-                        <img src={url} alt={`Foto ${idx + 1}`} loading="lazy" />
+                      <div
+                        className={'miniatura' + (arrastandoFoto === idx ? ' arrastando' : '') + (alvoFoto === idx && arrastandoFoto !== idx ? ' alvo' : '')}
+                        key={url}
+                        draggable
+                        onDragStart={(e) => {
+                          setArrastandoFoto(idx)
+                          e.dataTransfer.effectAllowed = 'move'
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault()
+                          setAlvoFoto(idx)
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault()
+                          if (arrastandoFoto !== null) moverFotoPara(arrastandoFoto, idx)
+                          setArrastandoFoto(null)
+                          setAlvoFoto(null)
+                        }}
+                        onDragEnd={() => {
+                          setArrastandoFoto(null)
+                          setAlvoFoto(null)
+                        }}
+                      >
+                        <img src={url} alt={`Foto ${idx + 1}`} loading="lazy" draggable={false} />
+                        <div className="mover-foto">
+                          <button
+                            type="button"
+                            disabled={idx === 0}
+                            onClick={() => moverFotoPara(idx, idx - 1)}
+                            aria-label={`Mover foto ${idx + 1} para a esquerda`}
+                          >
+                            ◀
+                          </button>
+                          <button
+                            type="button"
+                            disabled={idx === fotos.length - 1}
+                            onClick={() => moverFotoPara(idx, idx + 1)}
+                            aria-label={`Mover foto ${idx + 1} para a direita`}
+                          >
+                            ▶
+                          </button>
+                        </div>
                         {idx === 0 ? (
                           <span className="capa-selo">Capa</span>
                         ) : (
@@ -550,8 +646,14 @@ export default function ImovelModal({ imovel, usuario, abaInicial, onFechar, onS
               </button>
             )}
             <span className="espaco" />
+            {!editando && salvoAutoEm && <span className="auto-salvo">Rascunho salvo automaticamente</span>}
+            {!editando && salvoAutoEm && (
+              <button type="button" onClick={fecharMantendoRascunho}>
+                Continuar depois
+              </button>
+            )}
             <button type="button" onClick={cancelar}>
-              Cancelar
+              {!editando && salvoAutoEm ? 'Descartar' : 'Cancelar'}
             </button>
             <button className="primario" disabled={salvando || enviando}>
               {salvando ? 'Salvando…' : 'Salvar'}

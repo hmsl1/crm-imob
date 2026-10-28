@@ -1,7 +1,7 @@
 import { supabase } from './supabase.js'
 
 export const BUCKET = 'imoveis-fotos'
-export const MAX_FOTOS = 12
+export const MAX_FOTOS = 40
 
 // Reduz a foto no navegador antes de enviar: o plano grátis tem 1 GB de Storage.
 // Uma foto de celular (4–8 MB) vira ~200–400 KB.
@@ -55,4 +55,13 @@ export async function apagarFotos(urls) {
   if (caminhos.length === 0) return
   const { error } = await supabase.storage.from(BUCKET).remove(caminhos)
   if (error) throw error
+}
+
+// Nova lista com o item de "de" levado para a posição "para" (reordenar fotos). Não altera a original.
+export function moverFoto(lista, de, para) {
+  if (de === para || de < 0 || para < 0 || de >= lista.length || para >= lista.length) return lista
+  const nova = [...lista]
+  const [item] = nova.splice(de, 1)
+  nova.splice(para, 0, item)
+  return nova
 }
