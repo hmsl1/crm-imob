@@ -100,11 +100,13 @@ label.check input { width: auto; }
 
 /* Layout principal */
 .app { min-height: 100vh; display: flex; flex-direction: column; }
-.topo { display: flex; align-items: center; gap: 12px; padding: 6px 16px; background: var(--superficie); border-bottom: 1px solid var(--borda); flex-wrap: wrap; }.menu { display: flex; gap: 4px; margin-left: 8px; }
+.topo { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--superficie); border-bottom: 1px solid var(--borda); flex-wrap: wrap; }
+.menu { display: flex; gap: 4px; margin-left: 8px; }
 .menu button { border: none; background: none; padding: 6px 14px; border-radius: 999px; color: var(--suave); font-weight: 500; }
 .menu button:hover { background: var(--bg); }
 .menu button.ativo { background: var(--bg); color: var(--texto); font-weight: 600; }
 .acoes-topo { margin-left: auto; display: flex; gap: 12px; align-items: center; flex-wrap: nowrap; }
+.acoes-topo button { white-space: nowrap; }
 .marca { display: flex; align-items: center; gap: 10px; }
 .marca h1 { font-size: 1.1rem; }
 .marca .logo { height: 90px; width: auto; max-width: 240px; object-fit: contain; }
@@ -289,4 +291,40 @@ dl.dados a { color: var(--acento); }
 @media (prefers-reduced-motion: reduce) {
   .fundo-modal, .modal, .fundo-modal.saindo, .fundo-modal.saindo .modal { animation: none !important; }
   button, .lead, .imovel { transition: none; }
+}
+
+/* ---- Lead: abas, listas de itens, agenda ---- */
+.dica { color: var(--suave); font-size: 0.85rem; margin: 0 0 12px; }
+.suave { color: var(--suave); font-size: 0.85rem; }
+.abas button:disabled { opacity: 0.4; cursor: not-allowed; }
+.itens { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.itens > li { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; border: 1px solid var(--borda); border-radius: 8px; padding: 8px 12px; }
+.itens > li.vazio { border: none; justify-content: center; }
+.itens > li.atrasado { border-color: var(--perigo); }
+.itens > li.feito { opacity: 0.6; }
+.itens > li.feito strong { text-decoration: line-through; }
+.item-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 220px; }
+.item-acoes { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.item-acoes select { width: auto; padding: 4px 8px; font-size: 0.85rem; }
+.linha-add { display: flex; gap: 8px; }
+.linha-add select { flex: 1; }
+.agendar { border-top: 1px dashed var(--borda); padding-top: 12px; }
+.atalhos { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+.status-visita.realizada { color: var(--ok); }
+.status-visita.cancelada, .status-visita.nao_compareceu { color: var(--perigo); }
+.selos-lead { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.selo-lead { background: var(--bg); border-radius: 4px; padding: 1px 6px; font-size: 0.72rem; }
+.selo-lead.visita { color: var(--acento); }
+.selo-lead.atrasado { background: var(--perigo); color: #fff; }
+
+.agenda { max-width: 860px; margin: 0 auto; padding: 20px 16px; }
+.faixa-agenda { margin-bottom: 24px; }
+.faixa-agenda h2 { font-size: 1rem; margin: 0 0 10px; }
+.faixa-agenda.atrasados h2 { color: var(--perigo); }
+.tipo-agenda { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--suave); }
+.tipo-agenda.visita { color: var(--acento); }
+button.nome-lead { text-align: left; padding: 0; font-weight: 600; }
+@media (max-width: 900px) {
+  .acoes-topo { flex-wrap: wrap; margin-left: 0; width: 100%; }
+  .topo .busca { width: 100%; }
 }

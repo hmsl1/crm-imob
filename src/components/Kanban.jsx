@@ -3,6 +3,8 @@ import { supabase, ETAPAS } from '../lib/supabase.js'
 import LeadModal from './LeadModal.jsx'
 import Topo from './Topo.jsx'
 import { linkWhatsapp } from '../lib/format.js'
+import { rotuloOrigem, quandoCurto, faixaDoDia } from '../lib/lead.js'
+import { proximosPorLead } from '../lib/agenda.js'
 
 export default function Kanban({ usuario, pagina, onPagina }) {
   const [leads, setLeads] = useState([])
@@ -11,7 +13,8 @@ export default function Kanban({ usuario, pagina, onPagina }) {
   const [busca, setBusca] = useState('')
   const [arrastando, setArrastando] = useState(null)
   const [colunaAlvo, setColunaAlvo] = useState(null)
-  const [aberto, setAberto] = useState(null) // null | 'novo' | lead
+  const [aberto, setAberto] = useState(null) // null | { lead, aba }
+  const [proximos, setProximos] = useState({}) // { leadId: { visita, lembrete } }
 
   const carregar = useCallback(async () => {
     const { data, error } = await supabase
@@ -23,6 +26,12 @@ export default function Kanban({ usuario, pagina, onPagina }) {
       setErro('')
       setLeads(data)
     }
+    // selos de "retorno" e "visita" dos cards (se a migração 004 ainda não rodou, só não mostra os selos)
+    const [vis, lem] = await Promise.all([
+      supabase.from('visitas').select('lead_id, quando, status').eq('status', 'agendada'),
+      supabase.from('lembretes').select('lead_id, quando, concluido').eq('concluido', false),
+    ])
+    setProximos(proximosPorLead(vis.data ?? [], lem.data ?? []))
     setCarregando(false)
   }, [])
 
@@ -74,7 +83,7 @@ export default function Kanban({ usuario, pagina, onPagina }) {
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
         />
-        <button className="primario" onClick={() => setAberto('novo')}>
+        <button className="primario" onClick={() => setAberto({ lead: null, aba: 'dados' })}>
           + Novo lead
         </button>
       </Topo>
@@ -111,12 +120,13 @@ export default function Kanban({ usuario, pagina, onPagina }) {
                         setArrastando(null)
                         setColunaAlvo(null)
                       }}
-                      onClick={() => setAberto(lead)}
+                      onClick={() => setAberto({ lead, aba: 'dados' })}
                     >
                       <strong>{lead.nome}</strong>
                       {lead.telefone && <span>{lead.telefone}</span>}
+                      <Selos proximo={proximos[lead.id]} />
                       <div className="rodape-lead">
-                        <span className="etiqueta">{lead.origem}</span>
+                        <span className="etiqueta">{rotuloOrigem(lead.origem)}</span>
                         {lead.telefone && (
                           <a
                             className="btn-whatsapp"
@@ -143,14 +153,32 @@ export default function Kanban({ usuario, pagina, onPagina }) {
 
       {aberto && (
         <LeadModal
-          lead={aberto === 'novo' ? null : aberto}
+          key={aberto.lead?.id ?? 'novo'}
+          lead={aberto.lead}
+          usuario={usuario}
+          abaInicial={aberto.aba}
           onFechar={() => setAberto(null)}
-          onSalvo={() => {
-            setAberto(null)
+          onSalvo={(criado) => {
             carregar()
+            // lead recém-criado continua aberto, para vincular imóvel e agendar
+            setAberto(criado ? { lead: criado, aba: 'imoveis' } : null)
           }}
         />
       )}
+    </div>
+  )
+}
+
+// Selos do card: retorno (vermelho se atrasado) e próxima visita
+function Selos({ proximo }) {
+  if (!proximo) return null
+  const atrasado = proximo.lembrete && faixaDoDia(proximo.lembrete) === 'atrasados'
+  return (
+    <div className="selos-lead">
+      {proximo.lembrete && (
+        <span className={'selo-lead' + (atrasado ? ' atrasado' : '')}>Retorno {quandoCurto(proximo.lembrete)}</span>
+      )}
+      {proximo.visita && <span className="selo-lead visita">Visita {quandoCurto(proximo.visita)}</span>}
     </div>
   )
 }

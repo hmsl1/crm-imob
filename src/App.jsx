@@ -4,11 +4,12 @@ import { MARCA } from './config.js'
 import Login from './components/Login.jsx'
 import Kanban from './components/Kanban.jsx'
 import Imoveis from './components/Imoveis.jsx'
+import Agenda from './components/Agenda.jsx'
 
 export default function App() {
   const [sessao, setSessao] = useState(null)
   const [carregando, setCarregando] = useState(configurado)
-  const [pagina, setPagina] = useState('leads') // leads | imoveis
+  const [pagina, setPagina] = useState('leads') // leads | imoveis | agenda
 
   useEffect(() => {
     document.title = MARCA.nome
@@ -45,5 +46,7 @@ export default function App() {
   if (!sessao) return <Login />
 
   const props = { usuario: sessao.user, pagina, onPagina: setPagina }
-  return pagina === 'imoveis' ? <Imoveis {...props} /> : <Kanban {...props} />
+  if (pagina === 'imoveis') return <Imoveis {...props} />
+  if (pagina === 'agenda') return <Agenda {...props} />
+  return <Kanban {...props} />
 }

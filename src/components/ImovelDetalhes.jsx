@@ -4,6 +4,7 @@ import { CAMPOS_POR_ABA } from '../lib/imovelCampos.js'
 import { precosDoImovel } from '../lib/format.js'
 import { useFechamentoAnimado } from '../lib/useFechamentoAnimado.js'
 import CampoImovel from './CampoImovel.jsx'
+import CompartilharFicha from './CompartilharFicha.jsx'
 
 const rotulo = (lista, id) => lista.find((i) => i.id === id)?.rotulo ?? id
 
@@ -13,6 +14,8 @@ export default function ImovelDetalhes({ imovel, corretores, aba, onAba, onFecha
   const { saindo, fechar } = useFechamentoAnimado()
   const [atual, setAtual] = useState(0) // foto exibida na galeria
   const [editando, setEditando] = useState(null) // id do campo em edição
+  const [compartilhando, setCompartilhando] = useState(false)
+  const corretorNome = corretores?.find((c) => c.id === imovel.corretor_id)?.nome ?? ''
   const fotos = imovel.fotos ?? []
   const total = fotos.length
   const precos = precosDoImovel(imovel)
@@ -59,6 +62,7 @@ export default function ImovelDetalhes({ imovel, corretores, aba, onAba, onFecha
   )
 
   return (
+    <>
     <div className={'fundo-modal' + (saindo ? ' saindo' : '')} onClick={() => fechar(onFechar)}>
       <div className="modal largo" role="dialog" aria-modal="true" aria-label={imovel.titulo} onClick={(e) => e.stopPropagation()}>
         <div className="modal-topo alto">
@@ -74,6 +78,7 @@ export default function ImovelDetalhes({ imovel, corretores, aba, onAba, onFecha
             </div>
           </div>
           <div className="acoes-detalhe">
+            <button onClick={() => setCompartilhando(true)}>Compartilhar</button>
             <button className="primario" onClick={() => fechar(onEditar)}>
               Editar
             </button>
@@ -173,5 +178,7 @@ export default function ImovelDetalhes({ imovel, corretores, aba, onAba, onFecha
         ))}
       </div>
     </div>
+    {compartilhando && <CompartilharFicha imovel={imovel} corretor={corretorNome} onFechar={() => setCompartilhando(false)} />}
+    </>
   )
 }

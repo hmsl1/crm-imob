@@ -6,10 +6,11 @@ export default function Marca({ grande = false }) {
 
   return (
     <div className={'marca' + (grande ? ' grande' : '')}>
-      {!semLogo && (
-        <img src={MARCA.logo} alt="" className="logo" onError={() => setSemLogo(true)} />
+      {!semLogo ? (
+        <img src={MARCA.logo} alt={MARCA.nome} className="logo" onError={() => setSemLogo(true)} />
+      ) : (
+        <h1>{MARCA.nome}</h1>
       )}
-      <h1>{MARCA.nome}</h1>
     </div>
   )
 }

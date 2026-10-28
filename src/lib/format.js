@@ -3,10 +3,16 @@ import { temVenda, temAluguel } from './imovel.js'
 // Funções puras de formatação (fáceis de testar)
 
 // Assume Brasil (+55) quando o número vem sem código do país
-export function linkWhatsapp(telefone) {
-  let numeros = String(telefone).replace(/\D/g, '')
+// "texto" (opcional) já abre a conversa com a mensagem preenchida
+export function linkWhatsapp(telefone, texto) {
+  let numeros = String(telefone).replace(/\D/g, '').replace(/^0+/, '')
   if (numeros.length <= 11) numeros = '55' + numeros
-  return `https://wa.me/${numeros}`
+  return `https://wa.me/${numeros}` + (texto ? `?text=${encodeURIComponent(texto)}` : '')
+}
+
+// Sem destinatário: o WhatsApp pede para escolher o contato
+export function linkWhatsappSemNumero(texto) {
+  return `https://wa.me/?text=${encodeURIComponent(texto)}`
 }
 
 export function moeda(valor) {

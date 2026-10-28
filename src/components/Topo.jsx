@@ -4,6 +4,7 @@ import Marca from './Marca.jsx'
 const PAGINAS = [
   { id: 'leads', rotulo: 'Leads' },
   { id: 'imoveis', rotulo: 'Imóveis' },
+  { id: 'agenda', rotulo: 'Agenda' },
 ]
 
 // Barra superior compartilhada. As ações específicas de cada página entram como children.

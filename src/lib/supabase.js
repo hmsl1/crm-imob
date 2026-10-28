@@ -17,5 +17,3 @@ export const ETAPAS = [
   { id: 'fechado', rotulo: 'Fechado' },
   { id: 'perdido', rotulo: 'Perdido' },
 ]
-
-export const ORIGENS = ['manual', 'meta', 'google', 'indicacao', 'site']
