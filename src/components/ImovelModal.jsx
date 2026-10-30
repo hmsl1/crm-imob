@@ -17,6 +17,8 @@ import {
   payloadDoForm,
   validarImovel,
 } from '../lib/imovel.js'
+import { acharImoveisNoMesmoEndereco, enderecoMudou } from '../lib/duplicados.js'
+import AvisoDuplicado from './AvisoDuplicado.jsx'
 import { nomeDoEmail } from '../lib/format.js'
 import { enviarFoto, apagarFotos, moverFoto, MAX_FOTOS } from '../lib/imagens.js'
 import { useFechamentoAnimado } from '../lib/useFechamentoAnimado.js'
@@ -55,12 +57,13 @@ function GrupoChecks({ titulo, itens, marcados, onAlternar }) {
   )
 }
 
-export default function ImovelModal({ imovel, usuario, abaInicial, onFechar, onSalvo }) {
+export default function ImovelModal({ imovel, usuario, abaInicial, existentes = [], onFechar, onSalvo, onAbrirOutro }) {
   const editando = Boolean(imovel)
   // Novo imóvel: recupera o rascunho salvo automaticamente (se houver). Edição não usa rascunho.
   const [rascunho] = useState(() => (imovel ? null : lerRascunho(usuario.id)))
   const [form, setForm] = useState(() => rascunho?.form ?? formDoImovel(imovel))
   const [aba, setAba] = useState(abaInicial ?? rascunho?.aba ?? 'principal')
+  const [trocouAba, setTrocouAba] = useState(false) // liga o fade entre abas depois da primeira troca
   const [corretores, setCorretores] = useState([])
   const [fotos, setFotos] = useState(rascunho?.fotos ?? imovel?.fotos ?? [])
   const [recuperadoEm, setRecuperadoEm] = useState(rascunho?.salvoEm ?? null)
@@ -71,12 +74,16 @@ export default function ImovelModal({ imovel, usuario, abaInicial, onFechar, onS
   const [enviando, setEnviando] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
+  const [duplicados, setDuplicados] = useState(null) // imóveis já cadastrados no mesmo endereço
   const { saindo, fechar } = useFechamentoAnimado()
 
   // Props prontas para os campos (valor + onChange)
   const texto = (nome) => ({
     value: form[nome],
-    onChange: (e) => setForm((f) => ({ ...f, [nome]: e.target.value })),
+    onChange: (e) => {
+      if (nome === 'endereco' || nome === 'bairro' || nome === 'cidade') setDuplicados(null) // o endereço mudou: o aviso não vale mais
+      setForm((f) => ({ ...f, [nome]: e.target.value }))
+    },
   })
   const marca = (nome) => ({
     checked: form[nome],
@@ -229,8 +236,8 @@ export default function ImovelModal({ imovel, usuario, abaInicial, onFechar, onS
     fechar(onFechar)
   }
 
-  async function salvar(e) {
-    e.preventDefault()
+  async function salvar(e, ignorarDuplicados = false) {
+    e?.preventDefault()
     setErro('')
 
     const problema = validarImovel(form)
@@ -239,6 +246,17 @@ export default function ImovelModal({ imovel, usuario, abaInicial, onFechar, onS
       setErro(problema.mensagem)
       return
     }
+
+    // outro imóvel no mesmo endereço exato: avisa antes de gravar (só se o endereço é novo ou mudou)
+    if (!ignorarDuplicados && enderecoMudou(imovel, form)) {
+      const achados = acharImoveisNoMesmoEndereco(existentes, form, imovel?.id)
+      if (achados.length) {
+        setAba('principal')
+        setDuplicados(achados)
+        return
+      }
+    }
+    setDuplicados(null)
 
     setSalvando(true)
     const payload = { ...payloadDoForm(form), fotos }
@@ -271,7 +289,7 @@ export default function ImovelModal({ imovel, usuario, abaInicial, onFechar, onS
 
   return (
     <div className={'fundo-modal' + (saindo ? ' saindo' : '')} onClick={cancelar}>
-      <div className="modal largo" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div className={'modal largo' + (trocouAba ? ' anima-abas' : '')} role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <div className="modal-topo">
           <h2>{editando ? 'Editar imóvel' : 'Novo imóvel'}</h2>
           <button className="link" onClick={cancelar} aria-label="Fechar">
@@ -296,7 +314,7 @@ export default function ImovelModal({ imovel, usuario, abaInicial, onFechar, onS
               role="tab"
               aria-selected={aba === a.id}
               className={aba === a.id ? 'ativa' : ''}
-              onClick={() => setAba(a.id)}
+              onClick={() => (setTrocouAba(true), setAba(a.id))}
             >
               {a.rotulo}
             </button>
@@ -352,6 +370,10 @@ export default function ImovelModal({ imovel, usuario, abaInicial, onFechar, onS
                     </select>
                   </label>
                 </div>
+                <label>
+                  Endereço (rua e número)
+                  <input {...texto('endereco')} placeholder="Ex.: Rua das Flores, 123" />
+                </label>
                 <div className="duas">
                   <label>
                     Bairro
@@ -638,6 +660,21 @@ export default function ImovelModal({ imovel, usuario, abaInicial, onFechar, onS
           )}
 
           {erro && <p className="erro">{erro}</p>}
+
+          {duplicados?.length > 0 && (
+            <AvisoDuplicado
+              titulo={duplicados.length === 1 ? 'Já existe um imóvel cadastrado neste endereço' : 'Já existem imóveis cadastrados neste endereço'}
+              itens={duplicados.map((i) => ({
+                id: i.id,
+                principal: i.titulo,
+                detalhe: [i.endereco, i.bairro, i.owner_id && i.owner_id !== usuario.id ? 'cadastrado por outro usuário' : null].filter(Boolean).join(' · '),
+              }))}
+              onAbrir={onAbrirOutro ? (id) => fechar(() => onAbrirOutro(id)) : undefined}
+              onCorrigir={() => setDuplicados(null)}
+              onSalvarMesmoAssim={() => salvar(null, true)}
+              salvando={salvando}
+            />
+          )}
 
           <div className="acoes">
             {editando && (

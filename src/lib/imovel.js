@@ -155,6 +155,7 @@ export const FORM_VAZIO = {
   finalidade: 'venda',
   status: 'disponivel',
   corretor_id: '',
+  endereco: '',
   bairro: '',
   cidade: '',
 
@@ -222,6 +223,7 @@ export function payloadDoForm(f) {
     finalidade: f.finalidade,
     status: f.status,
     corretor_id: f.corretor_id || null,
+    endereco: texto(f.endereco),
     bairro: texto(f.bairro),
     cidade: texto(f.cidade),
 

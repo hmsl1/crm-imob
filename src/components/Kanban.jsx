@@ -7,6 +7,7 @@ import { rotuloOrigem, quandoCurto, faixaDoDia } from '../lib/lead.js'
 import { proximosPorLead } from '../lib/agenda.js'
 import { filtrarLeads } from '../lib/leadLista.js'
 import LeadLista from './LeadLista.jsx'
+import { useAvisos } from '../lib/avisosContexto.js'
 
 const CHAVE_VISAO = 'crm:visao-leads'
 const lerVisao = () => {
@@ -27,6 +28,7 @@ export default function Kanban({ usuario, pagina, onPagina }) {
   const [colunaAlvo, setColunaAlvo] = useState(null)
   const [aberto, setAberto] = useState(null) // null | { lead, aba }
   const [proximos, setProximos] = useState({}) // { leadId: { visita, lembrete } }
+  const { recarregar: recarregarAvisos } = useAvisos() // lembretes/visitas criados na janela do lead atualizam o selo da Agenda
 
   const carregar = useCallback(async () => {
     const { data, error } = await supabase
@@ -183,9 +185,14 @@ export default function Kanban({ usuario, pagina, onPagina }) {
           lead={aberto.lead}
           usuario={usuario}
           abaInicial={aberto.aba}
-          onFechar={() => setAberto(null)}
+          onFechar={() => {
+            setAberto(null)
+            recarregarAvisos()
+          }}
+          onAbrirOutro={(outro) => setAberto({ lead: outro, aba: 'dados' })}
           onSalvo={(criado) => {
             carregar()
+            recarregarAvisos()
             // lead recém-criado continua aberto, para vincular imóvel e agendar
             setAberto(criado ? { lead: criado, aba: 'imoveis' } : null)
           }}

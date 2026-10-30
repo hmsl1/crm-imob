@@ -3,13 +3,16 @@ import { supabase } from '../lib/supabase.js'
 import { FINALIDADES, temVenda, temAluguel } from '../lib/imovel.js'
 import { exibirCampo, marcadosDoGrupo, rascunhoInicial, calcularAtualizacao } from '../lib/imovelCampos.js'
 import { linkWhatsapp } from '../lib/format.js'
+import { linkMapa, enderecoExato } from '../lib/mapa.js'
+import { acharImoveisNoMesmoEndereco, enderecoMudou } from '../lib/duplicados.js'
 import Opcoes from './Opcoes.jsx'
+import AvisoDuplicado from './AvisoDuplicado.jsx'
 
 // Um campo na tela de detalhes: mostra o valor com um lápis ao lado. Clicando no lápis, só esse
 // campo vira editável; ao salvar, só as colunas dele são gravadas.
-export default function CampoImovel({ campo, imovel, corretores, editando, somenteLeitura = false, onEditar, onCancelar, onSalvo }) {
+export default function CampoImovel({ campo, imovel, corretores, existentes = [], editando, somenteLeitura = false, onEditar, onCancelar, onSalvo }) {
   const editor = editando && (
-    <EditorCampo campo={campo} imovel={imovel} corretores={corretores} onCancelar={onCancelar} onSalvo={onSalvo} />
+    <EditorCampo campo={campo} imovel={imovel} corretores={corretores} existentes={existentes} onCancelar={onCancelar} onSalvo={onSalvo} />
   )
   const lapis = !editando && !somenteLeitura && (
     <button type="button" className="lapis" aria-label={`Editar ${campo.rotulo}`} title="Editar este campo" onClick={onEditar}>
@@ -67,6 +70,7 @@ export default function CampoImovel({ campo, imovel, corretores, editando, somen
                 WhatsApp
               </a>
             )}
+            {campo.mapa && <BotaoMapa imovel={imovel} />}
             {lapis}
           </>
         )}
@@ -75,19 +79,48 @@ export default function CampoImovel({ campo, imovel, corretores, editando, somen
   )
 }
 
-function EditorCampo({ campo, imovel, corretores, onCancelar, onSalvo }) {
+// Abre o Google Maps pesquisando o endereço cadastrado (rua, bairro e cidade)
+export function BotaoMapa({ imovel }) {
+  const href = linkMapa(imovel)
+  if (!href) return null
+  return (
+    <a
+      className="btn-mapa"
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      title={enderecoExato(imovel) ? 'Abrir o endereço no Google Maps' : 'Sem rua e número: abre o bairro/cidade no Google Maps'}
+    >
+      <span aria-hidden="true">📍</span> Ver no mapa
+    </a>
+  )
+}
+
+function EditorCampo({ campo, imovel, corretores, existentes, onCancelar, onSalvo }) {
   const [rascunho, setRascunho] = useState(() => rascunhoInicial(campo, imovel))
   const [erro, setErro] = useState('')
   const [salvando, setSalvando] = useState(false)
-  const definir = (chave, valor) => setRascunho((r) => ({ ...r, [chave]: valor }))
+  const [duplicados, setDuplicados] = useState(null) // outros imóveis no mesmo endereço (só no campo Endereço)
+  const definir = (chave, valor) => {
+    setDuplicados(null)
+    setRascunho((r) => ({ ...r, [chave]: valor }))
+  }
 
-  async function salvar(e) {
-    e.preventDefault()
+  async function salvar(e, ignorarDuplicados = false) {
+    e?.preventDefault()
     setErro('')
     const resultado = calcularAtualizacao(campo, imovel, rascunho)
     if (resultado.erro) {
       setErro(resultado.erro)
       return
+    }
+    if (campo.id === 'endereco' && !ignorarDuplicados) {
+      const novo = { endereco: rascunho.endereco, bairro: imovel.bairro, cidade: imovel.cidade }
+      const achados = enderecoMudou(imovel, novo) ? acharImoveisNoMesmoEndereco(existentes, novo, imovel.id) : []
+      if (achados.length) {
+        setDuplicados(achados)
+        return
+      }
     }
     setSalvando(true)
     const { data, error } = await supabase
@@ -108,6 +141,15 @@ function EditorCampo({ campo, imovel, corretores, onCancelar, onSalvo }) {
     <form className="editor-campo" onSubmit={salvar} noValidate>
       <CorpoEditor campo={campo} rascunho={rascunho} definir={definir} corretores={corretores} />
       {erro && <p className="erro">{erro}</p>}
+      {duplicados?.length > 0 && (
+        <AvisoDuplicado
+          titulo={duplicados.length === 1 ? 'Já existe um imóvel cadastrado neste endereço' : 'Já existem imóveis cadastrados neste endereço'}
+          itens={duplicados.map((i) => ({ id: i.id, principal: i.titulo, detalhe: [i.endereco, i.bairro].filter(Boolean).join(' · ') }))}
+          onCorrigir={() => setDuplicados(null)}
+          onSalvarMesmoAssim={() => salvar(null, true)}
+          salvando={salvando}
+        />
+      )}
       <div className="acoes-editor">
         <button type="submit" className="primario pequeno" disabled={salvando}>
           {salvando ? 'Salvando…' : 'Salvar'}

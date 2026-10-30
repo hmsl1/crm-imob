@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { TIPOS_IMOVEL, STATUS_IMOVEL, FINALIDADES, atendeFinalidade } from '../lib/imovel.js'
 import { precosDoImovel } from '../lib/format.js'
+import { bairrosDosImoveis, atendeBairro } from '../lib/bairros.js'
 import Topo from './Topo.jsx'
 import ImovelModal from './ImovelModal.jsx'
 import ImovelDetalhes from './ImovelDetalhes.jsx'
@@ -20,6 +21,7 @@ export default function Imoveis({ usuario, pagina, onPagina }) {
   const [tipo, setTipo] = useState('')
   const [status, setStatus] = useState('')
   const [finalidade, setFinalidade] = useState('')
+  const [bairro, setBairro] = useState('')
   // null | { modo: 'ver' | 'editar' | 'novo', id?: string, aba?: string }
   const [aberto, setAberto] = useState(null)
   // aba da tela de detalhes; lembrada ao voltar do formulário de edição
@@ -53,9 +55,14 @@ export default function Imoveis({ usuario, pagina, onPagina }) {
     return () => window.removeEventListener('corretor-atualizado', carregar)
   }, [carregar])
 
+  const bairros = useMemo(() => bairrosDosImoveis(imoveis), [imoveis])
+  // se o bairro escolhido deixou de existir (imóvel editado ou excluído), volta para "todos"
+  const bairroAtivo = bairros.some((b) => b.id === bairro) ? bairro : ''
+
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase()
     return imoveis.filter((i) => {
+      if (!atendeBairro(i, bairroAtivo)) return false
       if (tipo && i.tipo !== tipo) return false
       if (status && i.status !== status) return false
       if (!atendeFinalidade(i.finalidade, finalidade)) return false
@@ -64,9 +71,9 @@ export default function Imoveis({ usuario, pagina, onPagina }) {
         (v) => v && v.toLowerCase().includes(termo)
       )
     })
-  }, [imoveis, busca, tipo, status, finalidade])
+  }, [imoveis, busca, tipo, status, finalidade, bairroAtivo])
 
-  const filtrando = busca || tipo || status || finalidade
+  const filtrando = busca || tipo || status || finalidade || bairroAtivo
   const imovelAberto = aberto?.id ? imoveis.find((i) => i.id === aberto.id) : null
 
   // Depois de salvar uma edição, volta para a visualização do imóvel já atualizado.
@@ -106,6 +113,14 @@ export default function Imoveis({ usuario, pagina, onPagina }) {
           {TIPOS_IMOVEL.map((t) => (
             <option key={t.id} value={t.id}>
               {t.rotulo}
+            </option>
+          ))}
+        </select>
+        <select value={bairroAtivo} onChange={(e) => setBairro(e.target.value)} aria-label="Bairro">
+          <option value="">Todos os bairros</option>
+          {bairros.map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.rotulo} ({b.total})
             </option>
           ))}
         </select>
@@ -198,6 +213,7 @@ export default function Imoveis({ usuario, pagina, onPagina }) {
           imovel={imovelAberto}
           corretores={corretores}
           somenteLeitura={Boolean(imovelAberto.owner_id) && imovelAberto.owner_id !== usuario.id}
+          existentes={imoveis}
           aba={abaDetalhe}
           onAba={setAbaDetalhe}
           onFechar={() => setAberto(null)}
@@ -213,6 +229,8 @@ export default function Imoveis({ usuario, pagina, onPagina }) {
           imovel={aberto.modo === 'editar' ? imovelAberto : null}
           abaInicial={aberto.aba}
           usuario={usuario}
+          existentes={imoveis}
+          onAbrirOutro={(id) => setAberto({ modo: 'ver', id })}
           // cancelar a edição volta para a visualização; cancelar um cadastro novo fecha
           onFechar={() => setAberto(aberto.modo === 'editar' ? { modo: 'ver', id: aberto.id } : null)}
           onSalvo={aoSalvar}

@@ -11,6 +11,8 @@ import {
 } from '../lib/lead.js'
 import { useFechamentoAnimado } from '../lib/useFechamentoAnimado.js'
 import { useDadosDoLead } from '../lib/useDadosDoLead.js'
+import { acharLeadsDuplicados, contatoMudou } from '../lib/duplicados.js'
+import AvisoDuplicado from './AvisoDuplicado.jsx'
 import { useNomeDoCorretor } from '../lib/corretor.js'
 import Opcoes from './Opcoes.jsx'
 import LeadImoveis from './LeadImoveis.jsx'
@@ -27,23 +29,29 @@ const ABAS = [
 const ETAPAS_OPCOES = ETAPAS
 const ORIGENS_OPCOES = ORIGENS.map((o) => ({ id: o.id, rotulo: o.rotulo }))
 
-export default function LeadModal({ lead, usuario, abaInicial = 'dados', onFechar, onSalvo }) {
+const MOTIVOS = { telefone: 'mesmo telefone', email: 'mesmo e-mail' }
+
+export default function LeadModal({ lead, usuario, abaInicial = 'dados', onFechar, onSalvo, onAbrirOutro }) {
   const editando = Boolean(lead)
   const [aba, setAba] = useState(abaInicial)
+  const [trocouAba, setTrocouAba] = useState(false) // liga o fade entre abas depois da primeira troca
   const [form, setForm] = useState(() => formDoLead(lead))
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
   const [compartilhando, setCompartilhando] = useState(null) // imóvel
+  const [duplicados, setDuplicados] = useState(null) // [{ lead, motivos }] quando o contato já existe em outro lead
   const { saindo, fechar } = useFechamentoAnimado()
 
   const dados = useDadosDoLead(lead?.id)
   const { nome: corretor } = useNomeDoCorretor(usuario)
 
-  const campo = (nome) => (e) =>
+  const campo = (nome) => (e) => {
+    if (nome === 'telefone' || nome === 'email') setDuplicados(null) // o contato mudou: o aviso não vale mais
     setForm((f) => ({
       ...f,
       [nome]: e.target.type === 'checkbox' ? e.target.checked : e.target.value,
     }))
+  }
 
   const alternarTipo = (id) =>
     setForm((f) => ({
@@ -51,8 +59,8 @@ export default function LeadModal({ lead, usuario, abaInicial = 'dados', onFecha
       busca_tipos: f.busca_tipos.includes(id) ? f.busca_tipos.filter((t) => t !== id) : [...f.busca_tipos, id],
     }))
 
-  async function salvar(e) {
-    e.preventDefault()
+  async function salvar(e, ignorarDuplicados = false) {
+    e?.preventDefault()
     setErro('')
     const problema = validarLead(form)
     if (problema) {
@@ -60,6 +68,19 @@ export default function LeadModal({ lead, usuario, abaInicial = 'dados', onFecha
       return setErro(problema.mensagem)
     }
     setSalvando(true)
+
+    // mesmo telefone ou e-mail de outro lead: avisa antes de gravar (só se o contato é novo ou mudou)
+    if (!ignorarDuplicados && contatoMudou(lead, form)) {
+      const { data: existentes } = await supabase.from('leads').select('*')
+      const achados = acharLeadsDuplicados(existentes ?? [], form, lead?.id)
+      if (achados.length) {
+        setSalvando(false)
+        setAba('dados')
+        return setDuplicados(achados)
+      }
+    }
+    setDuplicados(null)
+
     const payload = payloadDoLead(form, lead)
 
     if (editando) {
@@ -90,7 +111,7 @@ export default function LeadModal({ lead, usuario, abaInicial = 'dados', onFecha
   return (
     <>
     <div className={'fundo-modal' + (saindo ? ' saindo' : '')} onClick={() => fechar(onFechar)}>
-      <div className="modal largo" role="dialog" aria-modal="true" aria-label="Lead" onClick={(e) => e.stopPropagation()}>
+      <div className={'modal largo' + (trocouAba ? ' anima-abas' : '')} role="dialog" aria-modal="true" aria-label="Lead" onClick={(e) => e.stopPropagation()}>
         <div className="modal-topo alto">
           <div>
             <h2>{editando ? lead.nome : 'Novo lead'}</h2>
@@ -113,7 +134,7 @@ export default function LeadModal({ lead, usuario, abaInicial = 'dados', onFecha
                 className={aba === a.id ? 'ativa' : ''}
                 disabled={bloqueada}
                 title={bloqueada ? 'Salve o lead primeiro' : undefined}
-                onClick={() => setAba(a.id)}
+                onClick={() => (setTrocouAba(true), setAba(a.id))}
               >
                 {a.rotulo}
               </button>
@@ -225,6 +246,25 @@ export default function LeadModal({ lead, usuario, abaInicial = 'dados', onFecha
             )}
 
             {erroGeral && <p className="erro">{erroGeral}</p>}
+
+            {duplicados?.length > 0 && (
+              <AvisoDuplicado
+                titulo={duplicados.length === 1 ? 'Este contato já está cadastrado em outro lead' : 'Este contato já está cadastrado em outros leads'}
+                itens={duplicados.map(({ lead: outro, motivos }) => ({
+                  id: outro.id,
+                  principal: outro.nome,
+                  detalhe: [motivos.map((m) => MOTIVOS[m]).join(' e '), ETAPAS.find((x) => x.id === outro.status)?.rotulo]
+                    .filter(Boolean)
+                    .join(' · '),
+                }))}
+                onAbrir={
+                  onAbrirOutro ? (id) => onAbrirOutro(duplicados.find((d) => d.lead.id === id).lead) : undefined
+                }
+                onCorrigir={() => setDuplicados(null)}
+                onSalvarMesmoAssim={() => salvar(null, true)}
+                salvando={salvando}
+              />
+            )}
 
             <div className="acoes">
               {editando && (

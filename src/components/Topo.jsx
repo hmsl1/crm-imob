@@ -3,6 +3,9 @@ import { useState } from 'react'
 import Marca from './Marca.jsx'
 import PerfilModal from './PerfilModal.jsx'
 import { useNomeDoCorretor } from '../lib/corretor.js'
+import { useAvisos } from '../lib/avisosContexto.js'
+import { resumoDosAvisos } from '../lib/avisos.js'
+import { IconeSino } from './AvisoHoje.jsx'
 
 const PAGINAS = [
   { id: 'leads', rotulo: 'Leads' },
@@ -14,21 +17,33 @@ const PAGINAS = [
 export default function Topo({ usuario, pagina, onPagina, children }) {
   const { nome, cadastrado } = useNomeDoCorretor(usuario)
   const [perfil, setPerfil] = useState(false)
+  const { avisos } = useAvisos()
   return (
     <>
     <header className="topo">
       <Marca />
       <nav className="menu">
-        {PAGINAS.map((p) => (
-          <button
-            key={p.id}
-            className={pagina === p.id ? 'ativo' : ''}
-            aria-current={pagina === p.id ? 'page' : undefined}
-            onClick={() => onPagina(p.id)}
-          >
-            {p.rotulo}
-          </button>
-        ))}
+        {PAGINAS.map((p) => {
+          const selo = p.id === 'agenda' && avisos.total > 0
+          return (
+            <button
+              key={p.id}
+              className={pagina === p.id ? 'ativo' : ''}
+              aria-current={pagina === p.id ? 'page' : undefined}
+              aria-label={selo ? `${p.rotulo}. ${resumoDosAvisos(avisos)}` : undefined}
+              onClick={() => onPagina(p.id)}
+            >
+              {p.rotulo}
+              {selo && (
+                // key = total: a cada mudança o selo "pulsa" uma vez
+                <span key={avisos.total} className={'selo-agenda' + (avisos.urgente ? ' urgente' : '')} title={resumoDosAvisos(avisos)} aria-hidden="true">
+                  <IconeSino />
+                  {avisos.total}
+                </span>
+              )}
+            </button>
+          )
+        })}
       </nav>
       <div className="acoes-topo">{children}</div>
       <button

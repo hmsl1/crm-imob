@@ -1,19 +1,21 @@
 import { useEffect, useState } from 'react'
-import { TIPOS_IMOVEL, FINALIDADES, STATUS_IMOVEL, ABAS_IMOVEL } from '../lib/imovel.js'
+import { TIPOS_IMOVEL, FINALIDADES, ABAS_IMOVEL } from '../lib/imovel.js'
 import { CAMPOS_POR_ABA } from '../lib/imovelCampos.js'
 import { precosDoImovel } from '../lib/format.js'
 import { useFechamentoAnimado } from '../lib/useFechamentoAnimado.js'
-import CampoImovel from './CampoImovel.jsx'
+import CampoImovel, { BotaoMapa } from './CampoImovel.jsx'
+import StatusImovel from './StatusImovel.jsx'
 import CompartilharFicha from './CompartilharFicha.jsx'
 
 const rotulo = (lista, id) => lista.find((i) => i.id === id)?.rotulo ?? id
 
 // Visualização do imóvel em abas (as mesmas do formulário). Cada campo tem um lápis para editar
 // só aquele campo; o botão "Editar" abre o formulário completo.
-export default function ImovelDetalhes({ imovel, corretores, somenteLeitura = false, aba, onAba, onFechar, onEditar, onAtualizado }) {
+export default function ImovelDetalhes({ imovel, corretores, existentes = [], somenteLeitura = false, aba, onAba, onFechar, onEditar, onAtualizado }) {
   const { saindo, fechar } = useFechamentoAnimado()
   const [atual, setAtual] = useState(0) // foto exibida na galeria
   const [editando, setEditando] = useState(null) // id do campo em edição
+  const [trocouAba, setTrocouAba] = useState(false) // liga o fade entre abas depois da primeira troca
   const [compartilhando, setCompartilhando] = useState(false)
   const corretorNome = corretores?.find((c) => c.id === imovel.corretor_id)?.nome ?? ''
   const fotos = imovel.fotos ?? []
@@ -51,6 +53,7 @@ export default function ImovelDetalhes({ imovel, corretores, somenteLeitura = fa
       campo={campo}
       imovel={imovel}
       corretores={corretores}
+      existentes={existentes}
       editando={editando === campo.id}
       somenteLeitura={somenteLeitura}
       onEditar={() => setEditando(campo.id)}
@@ -65,7 +68,7 @@ export default function ImovelDetalhes({ imovel, corretores, somenteLeitura = fa
   return (
     <>
     <div className={'fundo-modal' + (saindo ? ' saindo' : '')} onClick={() => fechar(onFechar)}>
-      <div className="modal largo" role="dialog" aria-modal="true" aria-label={imovel.titulo} onClick={(e) => e.stopPropagation()}>
+      <div className={'modal largo' + (trocouAba ? ' anima-abas' : '')} role="dialog" aria-modal="true" aria-label={imovel.titulo} onClick={(e) => e.stopPropagation()}>
         <div className="modal-topo alto">
           <div className="topo-detalhe">
             {fotos[0] && (
@@ -75,7 +78,9 @@ export default function ImovelDetalhes({ imovel, corretores, somenteLeitura = fa
             )}
             <div>
               <h2>{imovel.titulo}</h2>
-              <div className="subtitulo">{local}</div>
+              <div className="subtitulo">
+                {local} <BotaoMapa imovel={imovel} />
+              </div>
             </div>
           </div>
           <div className="acoes-detalhe">
@@ -107,10 +112,11 @@ export default function ImovelDetalhes({ imovel, corretores, somenteLeitura = fa
             ))
           )}
           <span className="etiquetas">
-            <span className={'etiqueta-status status-imovel ' + imovel.status}>{rotulo(STATUS_IMOVEL, imovel.status)}</span>
             <span className="etiqueta">{rotulo(FINALIDADES, imovel.finalidade)}</span>
           </span>
         </div>
+
+        <StatusImovel imovel={imovel} somenteLeitura={somenteLeitura} onAtualizado={onAtualizado} />
 
         <div className="abas" role="tablist">
           {ABAS_IMOVEL.map((a) => (
@@ -120,7 +126,7 @@ export default function ImovelDetalhes({ imovel, corretores, somenteLeitura = fa
               role="tab"
               aria-selected={aba === a.id}
               className={aba === a.id ? 'ativa' : ''}
-              onClick={() => mudarAba(a.id)}
+              onClick={() => (setTrocouAba(true), mudarAba(a.id))}
             >
               {a.rotulo}
             </button>

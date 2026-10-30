@@ -1,19 +1,24 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase, configurado } from './lib/supabase.js'
 import { MARCA } from './config.js'
 import Login from './components/Login.jsx'
-import Kanban from './components/Kanban.jsx'
-import Imoveis from './components/Imoveis.jsx'
-import Agenda from './components/Agenda.jsx'
+import AreaLogada from './components/AreaLogada.jsx'
+import NovaSenha from './components/NovaSenha.jsx'
+import { abriuPorRecuperacao } from './lib/senha.js'
 
 export default function App() {
   const [sessao, setSessao] = useState(null)
   const [carregando, setCarregando] = useState(configurado)
   const [pagina, setPagina] = useState('leads') // leads | imoveis | agenda
+  const [saindoPagina, setSaindoPagina] = useState(false)
+  const timerPagina = useRef(null)
+  const [recuperando, setRecuperando] = useState(abriuPorRecuperacao) // abriu pelo link de "esqueci a senha"
 
   useEffect(() => {
     document.title = MARCA.nome
   }, [])
+
+  useEffect(() => () => clearTimeout(timerPagina.current), [])
 
   useEffect(() => {
     if (!configurado) return
@@ -21,8 +26,9 @@ export default function App() {
       setSessao(data.session)
       setCarregando(false)
     })
-    const { data: sub } = supabase.auth.onAuthStateChange((_evento, nova) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((evento, nova) => {
       setSessao(nova)
+      if (evento === 'PASSWORD_RECOVERY') setRecuperando(true)
     })
     return () => sub.subscription.unsubscribe()
   }, [])
@@ -42,11 +48,19 @@ export default function App() {
     )
   }
 
+  // Troca de página: o conteúdo some em fade (140 ms), troca e volta em fade (a barra superior fica parada)
+  function trocarPagina(nova) {
+    if (nova === pagina || saindoPagina) return
+    setSaindoPagina(true)
+    timerPagina.current = setTimeout(() => {
+      setPagina(nova)
+      setSaindoPagina(false)
+    }, 140)
+  }
+
   if (carregando) return <div className="centro">Carregando…</div>
   if (!sessao) return <Login />
+  if (recuperando) return <NovaSenha onConcluido={() => setRecuperando(false)} />
 
-  const props = { usuario: sessao.user, pagina, onPagina: setPagina }
-  if (pagina === 'imoveis') return <Imoveis {...props} />
-  if (pagina === 'agenda') return <Agenda {...props} />
-  return <Kanban {...props} />
+  return <AreaLogada usuario={sessao.user} pagina={pagina} saindoPagina={saindoPagina} onPagina={trocarPagina} />
 }

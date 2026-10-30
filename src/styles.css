@@ -1,43 +1,26 @@
+/* Paleta da marca: fundo areia/creme, destaques em verde profundo. Sempre neste tema, mesmo com o aparelho no modo escuro */
 :root {
-  /* Paleta da marca (kit): verde profundo #243532, bronze #9E673C, creme #F4ECDF,
-     verde mar #75938C, verde montanha #36504C, dourado do sol #B47D4B, areia #E5D3B9 */
   --bg: #f4ecdf;               /* creme */
-  --superficie: #fbf8f2;       /* creme mais claro, para cartões e janelas */
+  --superficie: #fbf7ef;       /* creme mais claro: cartões, janelas e campos */
   --borda: #e5d3b9;            /* areia */
   --texto: #243532;            /* verde profundo */
-  --suave: #5b6b67;            /* verde acinzentado (texto secundário, contraste AA) */
-  --acento: #9e673c;           /* bronze: linhas, foco, detalhes */
-  --acento-texto: #85532d;     /* bronze mais escuro, para texto pequeno (contraste AA) */
-  --primario: #243532;         /* botão principal: verde profundo */
-  --primario-hover: #36504c;   /* verde montanha */
-  --sobre-primario: #f4ecdf;   /* texto sobre o botão principal */
-  --perigo: #a8402f;
-  --ok: #2e7d5b;
-  --sombra: 36, 53, 50;        /* RGB da sombra (verde profundo) */
+  --suave: #4b635f;            /* verde montanha, um pouco mais claro (texto secundário) */
+  --acento: #243532;           /* verde profundo: botões, bordas ativas, abas */
+  --acento-escuro: #17231f;
+  --acento-texto: #36504c;     /* verde montanha: links e ícones em texto */
+  --primario: #243532;         /* fundo de seleções ativas (lista de leads, Quadro/Lista) */
+  --sobre-primario: #f4ecdf;   /* texto sobre o verde */
+  --perigo: #b03a2e;
+  --ok: #1a7f4b;
+  --sombra: 36, 53, 50;        /* RGB das sombras */
   --raio: 8px;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   color: var(--texto);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #1b2826;
-    --superficie: #243532;       /* verde profundo */
-    --borda: #36504c;            /* verde montanha */
-    --texto: #f4ecdf;            /* creme */
-    --suave: #a3b5af;
-    --acento: #b47d4b;           /* dourado do sol */
-    --acento-texto: #d49a63;
-    --primario: #c8905a;         /* dourado: botão principal sobre fundo escuro */
-    --primario-hover: #d49a63;
-    --sobre-primario: #1b2826;
-    --perigo: #e58a76;
-    --ok: #7fc4a2;
-    --sombra: 0, 0, 0;
-  }
+  color-scheme: light;
 }
 
 * { box-sizing: border-box; }
+html { overflow-y: scroll; } /* a barra de rolagem fica sempre presente: a página não "pula" de largura quando ela aparece ou some */
 body { margin: 0; background: var(--bg); }
 h1, h2, h3 { margin: 0; }
 code { background: var(--borda); padding: 1px 5px; border-radius: 4px; font-size: 0.9em; }
@@ -72,19 +55,19 @@ button.primario {
   padding: 8px 16px;
   font-weight: 600;
   color: var(--sobre-primario);
-  border-color: var(--primario);
-  background: var(--primario);
-  box-shadow: 0 1px 2px rgba(var(--sombra), 0.22),
-    0 6px 12px -6px rgba(var(--sombra), 0.45);
+  border-color: var(--acento-escuro);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--acento) 86%, #fff), var(--acento));
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.18),
+    0 6px 12px -6px color-mix(in srgb, var(--acento) 70%, transparent);
 }
 button.primario:hover:not(:disabled) {
-  background: var(--primario-hover);
-  border-color: var(--primario-hover);
-  box-shadow: 0 2px 4px rgba(var(--sombra), 0.25),
-    0 10px 18px -8px rgba(var(--sombra), 0.5);
+  background: linear-gradient(180deg, var(--acento), var(--acento-escuro));
+  border-color: var(--acento-escuro);
+  box-shadow: 0 2px 4px rgba(16, 24, 40, 0.2),
+    0 10px 18px -8px color-mix(in srgb, var(--acento) 80%, transparent);
   transform: translateY(-1px);
 }
-button.primario:active:not(:disabled) { transform: translateY(0); box-shadow: 0 1px 2px rgba(var(--sombra), 0.25); }
+button.primario:active:not(:disabled) { transform: translateY(0); box-shadow: 0 1px 2px rgba(16, 24, 40, 0.2); }
 
 button.perigo {
   color: var(--perigo);
@@ -106,6 +89,7 @@ label.check input { width: auto; }
 .faixa { margin: 0; padding: 8px 16px; background: color-mix(in srgb, var(--perigo) 12%, transparent); }
 
 .centro { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
+.app > .centro { min-height: 40vh; } /* "Carregando…" dentro das páginas não força a página a passar da altura da tela */
 .cartao { background: var(--superficie); border: 1px solid var(--borda); border-radius: 12px; padding: 28px; width: min(380px, 100%); display: flex; flex-direction: column; gap: 4px; }
 .cartao .sub { color: var(--suave); margin: 0 0 16px; text-align: center; }
 
@@ -142,7 +126,7 @@ label.check input { width: auto; }
 .rodape-lead { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
 /* Botão WhatsApp: contorno verde para ficar claro que é clicável; preenche no hover */
 .btn-whatsapp { display: inline-flex; align-items: center; padding: 3px 12px; border: 1.5px solid var(--ok); border-radius: 999px; color: var(--ok); background: transparent; font-size: 0.8rem; font-weight: 600; line-height: 1.4; text-decoration: none; cursor: pointer; transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease; }
-.btn-whatsapp:hover { background: var(--ok); color: var(--superficie); }
+.btn-whatsapp:hover { background: var(--ok); color: #fff; }
 .btn-whatsapp:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 35%, transparent); }
 .etiqueta { background: var(--bg); border-radius: 4px; padding: 1px 6px; font-size: 0.75rem; }
 
@@ -183,9 +167,30 @@ label.check input { width: auto; }
 .selo, .selo-fotos { position: absolute; top: 8px; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 600; color: #fff; }
 .selo { left: 8px; }
 .selo-fotos { right: 8px; background: rgba(0, 0, 0, 0.6); font-weight: 500; }
-.status-imovel.disponivel { background: #2e7d5b; }
-.status-imovel.reservado { background: #8a5a33; }
-.status-imovel.vendido { background: #5b6b67; }
+.status-imovel.disponivel { background: #1a7f4b; }
+.status-imovel.reservado { background: #9e673c; } /* bronze da marca */
+.status-imovel.vendido { background: #6b7773; }
+
+/* Troca de disponibilidade (tela de detalhes): o atual fica preenchido com a cor do status */
+.status-troca { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; margin: 0 0 16px; }
+.status-troca-rotulo { font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--suave); }
+.status-botoes { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.status-opcao { padding: 4px 14px; border-radius: 999px; font-size: 0.85rem; background: var(--superficie); color: var(--texto); }
+.status-opcao.status-imovel { background: var(--superficie); }
+.status-opcao.status-imovel.atual { color: #fff; border-color: transparent; font-weight: 600; }
+.status-opcao.status-imovel.atual.disponivel { background: #1a7f4b; }
+.status-opcao.status-imovel.atual.reservado { background: #9e673c; }
+.status-opcao.status-imovel.atual.vendido { background: #6b7773; }
+.status-opcao.atual:disabled { opacity: 1; cursor: default; }
+.status-troca .erro { flex: 1 1 100%; margin: 0; font-size: 0.85rem; }
+
+/* Botão "Ver no mapa" (Google Maps) */
+.btn-mapa { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border: 1.5px solid var(--acento-texto); border-radius: 999px; color: var(--acento-texto); background: transparent; font-size: 0.78rem; font-weight: 600; line-height: 1.4; text-decoration: none; cursor: pointer; white-space: nowrap; transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease; }
+.btn-mapa:hover { background: var(--primario); border-color: var(--primario); color: var(--sobre-primario); }
+.btn-mapa:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--acento) 35%, transparent); }
+dl.dados a.btn-mapa { color: var(--acento-texto); }
+dl.dados a.btn-mapa:hover { color: var(--sobre-primario); }
+.modal-topo .subtitulo .btn-mapa { margin-left: 6px; vertical-align: 1px; }
 
 .modal.largo { width: min(780px, 100%); }
 
@@ -277,7 +282,7 @@ dl.dados a { color: var(--acento-texto); }
 .miniatura img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .miniatura .remover { position: absolute; top: 4px; right: 4px; padding: 0 6px; line-height: 1.5; font-size: 0.8rem; background: rgba(0, 0, 0, 0.65); border: none; color: #fff; }
 .miniatura .capa-selo, .miniatura .tornar-capa { position: absolute; left: 4px; bottom: 4px; font-size: 0.7rem; padding: 1px 6px; border-radius: 4px; }
-.miniatura .capa-selo { background: var(--acento); color: #fff; }
+.miniatura .capa-selo { background: var(--acento); color: var(--sobre-primario); }
 .miniatura .tornar-capa { background: rgba(0, 0, 0, 0.65); border: none; color: #fff; }
 .botao-arquivo { display: inline-block; border: 1px dashed var(--borda); border-radius: var(--raio); padding: 8px 14px; cursor: pointer; color: var(--acento-texto); font-size: 0.95rem; margin: 0; }
 .botao-arquivo:hover { border-color: var(--acento); }
@@ -388,3 +393,53 @@ button.nome-lead { text-align: left; padding: 0; font-weight: 600; }
 .visoes button:hover:not(:disabled):not(.ativo) { background: color-mix(in srgb, var(--borda) 40%, var(--superficie)); }
 
 .aviso-leitura { background: color-mix(in srgb, var(--acento) 12%, var(--superficie)); border: 1px solid var(--borda); border-radius: var(--raio); padding: 6px 12px; margin: 0 0 14px; font-size: 0.85rem; color: var(--suave); }
+
+.troca-senha { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--borda); }
+.troca-senha h3 { font-size: 1rem; margin-bottom: 10px; }
+
+/* ---- Troca suave de página e de abas (mesmo estilo dos fades das janelas) ---- */
+@keyframes conteudo-entra { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* página: o conteúdo abaixo da barra superior entra em fade; ao trocar, sai em fade */
+.app > :not(.topo):not(.fundo-modal) { animation: conteudo-entra 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.pagina.saindo .app > :not(.topo):not(.fundo-modal) { animation: none; opacity: 0; transform: translateY(4px); transition: opacity 0.14s ease-in, transform 0.14s ease-in; pointer-events: none; }
+
+/* abas dentro das janelas: o conteúdo novo entra em fade (só depois da primeira troca de aba) */
+.modal.anima-abas form > :not(.acoes):not(.erro):not(.aviso):not(.rascunho-aviso),
+.modal.anima-abas > .secao { animation: conteudo-entra 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .app > :not(.topo):not(.fundo-modal), .modal.anima-abas form > *, .modal.anima-abas > .secao { animation: none !important; }
+  .pagina.saindo .app > :not(.topo) { transition: none; }
+}
+
+/* ---- Aviso de duplicado (lead com o mesmo contato, imóvel no mesmo endereço) ---- */
+.aviso-duplicado { background: color-mix(in srgb, #b47d4b 14%, var(--superficie)); border: 1px solid color-mix(in srgb, #b47d4b 45%, var(--borda)); border-left: 4px solid #b47d4b; border-radius: var(--raio); padding: 10px 12px; margin: 8px 0 12px; font-size: 0.9rem; }
+.aviso-duplicado ul { list-style: none; margin: 6px 0 10px; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.aviso-duplicado li { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.aviso-duplicado small { color: var(--suave); font-size: 0.8rem; }
+.acoes-aviso { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.editor-campo .aviso-duplicado { background: var(--superficie); }
+
+/* ---- Selo da Agenda no menu: sino + quantos compromissos estão perto (hoje, atrasados e próximos 2 dias) ---- */
+.menu button { position: relative; }
+.selo-agenda { position: absolute; top: -4px; right: -6px; display: inline-flex; align-items: center; gap: 2px; min-width: 20px; height: 20px; padding: 0 6px 0 5px; border-radius: 999px; background: #b47d4b; color: #fff; font-size: 0.7rem; font-weight: 700; line-height: 1; box-shadow: 0 0 0 2px var(--superficie); animation: selo-pulsa 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.4) both; }
+.selo-agenda.urgente { background: var(--perigo); }
+@keyframes selo-pulsa { 0% { transform: scale(0.4); opacity: 0; } 70% { transform: scale(1.18); opacity: 1; } 100% { transform: scale(1); } }
+
+/* ---- Janelinha de hoje (canto da tela): não bloqueia a tela nem toma o foco; só sai ao fechar ---- */
+.aviso-hoje { position: fixed; right: 16px; bottom: 16px; z-index: 9; width: min(360px, calc(100vw - 32px)); background: var(--superficie); border: 1px solid var(--borda); border-top: 3px solid var(--acento); border-radius: 12px; padding: 12px 14px 14px; box-shadow: 0 18px 40px -14px rgba(var(--sombra), 0.45), 0 2px 6px rgba(var(--sombra), 0.12); display: flex; flex-direction: column; gap: 10px; animation: aviso-entra 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) 0.45s both; }
+.aviso-hoje.saindo { animation: aviso-sai 0.26s ease-in forwards; pointer-events: none; }
+@keyframes aviso-entra { from { opacity: 0; transform: translateY(18px) scale(0.97); } to { opacity: 1; transform: none; } }
+@keyframes aviso-sai { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(28px) scale(0.98); } }
+.aviso-hoje-topo { display: flex; align-items: center; gap: 8px; }
+.aviso-hoje-topo strong { flex: 1; font-size: 0.95rem; }
+.aviso-hoje-icone { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--primario); color: var(--sobre-primario); }
+.aviso-hoje-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; max-height: 220px; overflow-y: auto; }
+.aviso-hoje-lista li { display: flex; gap: 10px; align-items: baseline; }
+.aviso-hoje-hora { flex: 0 0 auto; font-variant-numeric: tabular-nums; font-weight: 700; color: var(--acento-texto); min-width: 42px; }
+.aviso-hoje-texto { display: flex; flex-direction: column; min-width: 0; }
+.aviso-hoje-texto small { color: var(--suave); font-size: 0.8rem; overflow-wrap: anywhere; }
+.aviso-hoje > button.primario { align-self: flex-end; }
+@media (max-width: 520px) { .aviso-hoje { right: 12px; bottom: 12px; width: calc(100vw - 24px); } }
+@media (prefers-reduced-motion: reduce) { .aviso-hoje, .aviso-hoje.saindo, .selo-agenda { animation: none !important; } }

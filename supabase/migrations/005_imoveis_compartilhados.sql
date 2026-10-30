@@ -1,3 +1,10 @@
+-- Migração 005 — imóveis visíveis para todos os usuários
+-- Antes: cada usuário só enxergava os imóveis que ele mesmo cadastrou.
+-- Agora: todos os usuários logados VEEM todos os imóveis (e o nome do corretor responsável),
+--        mas só quem cadastrou pode ALTERAR ou EXCLUIR o imóvel.
+-- Leads, visitas, lembretes e o restante continuam privados de cada usuário.
+-- Pode ser repetida sem erro.
+
 -- ---------------------------------------------------------------
 -- Imóveis
 -- ---------------------------------------------------------------

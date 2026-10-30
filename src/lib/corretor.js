@@ -32,10 +32,33 @@ export async function salvarNomeDoCorretor(usuario, valor) {
   return { nome }
 }
 
+// Último nome conhecido de cada usuário. Cada página monta a barra superior de novo; sem isso, a barra
+// mostrava o nome derivado do e-mail por um instante e só depois o nome cadastrado (e mudava de tamanho).
+const memoria = {}
+const chaveNome = (id) => `crm:nome-corretor:${id}`
+function nomeConhecido(usuario) {
+  if (memoria[usuario?.id]) return memoria[usuario.id]
+  try {
+    const salvo = JSON.parse(localStorage.getItem(chaveNome(usuario?.id)) ?? 'null')
+    if (salvo?.nome) return (memoria[usuario.id] = salvo)
+  } catch {
+    /* sem armazenamento: usa só a memória desta sessão */
+  }
+  return null
+}
+function lembrarNome(usuario, valor) {
+  memoria[usuario.id] = valor
+  try {
+    localStorage.setItem(chaveNome(usuario.id), JSON.stringify(valor))
+  } catch {
+    /* ignora */
+  }
+}
+
 // Nome do corretor da conta (na falta de um cadastrado, deriva do e-mail). Atualiza quando o nome é salvo.
 export function useNomeDoCorretor(usuario) {
-  const [nome, setNome] = useState(nomeDoEmail(usuario?.email))
-  const [cadastrado, setCadastrado] = useState(false)
+  const [nome, setNome] = useState(() => nomeConhecido(usuario)?.nome ?? nomeDoEmail(usuario?.email))
+  const [cadastrado, setCadastrado] = useState(() => nomeConhecido(usuario)?.cadastrado ?? false)
 
   const carregar = useCallback(() => {
     supabase
@@ -45,8 +68,10 @@ export function useNomeDoCorretor(usuario) {
       .eq('e_proprio', true)
       .maybeSingle()
       .then(({ data }) => {
-        setCadastrado(Boolean(data?.nome))
-        setNome(data?.nome || nomeDoEmail(usuario?.email))
+        const valor = { nome: data?.nome || nomeDoEmail(usuario?.email), cadastrado: Boolean(data?.nome) }
+        lembrarNome(usuario, valor)
+        setCadastrado(valor.cadastrado)
+        setNome(valor.nome)
       })
   }, [usuario?.id, usuario?.email])
 

@@ -53,6 +53,7 @@ export const CAMPOS_POR_ABA = {
         // mudar a finalidade pode exigir/descartar valores, por isso edita os três juntos
         campo('finalidade', 'Finalidade', 'finalidade', { chaves: ['finalidade', 'valor_venda', 'valor_aluguel'] }),
         campo('status', 'Disponibilidade', 'select', { opcoes: STATUS_IMOVEL }),
+        campo('endereco', 'Endereço', 'texto', { mapa: true }),
         campo('bairro', 'Bairro', 'texto'),
         campo('cidade', 'Cidade', 'texto'),
         campo('corretor_id', 'Corretor responsável', 'corretor'),

@@ -13,6 +13,7 @@ CRM para corretor individual: funil kanban de leads, histórico de interações 
    3. `supabase/migrations/003_imoveis_campos.sql` (corretores e novos campos do imóvel; pode ser repetido sem erro)
    4. `supabase/migrations/004_leads_agenda.sql` (perfil de busca, lembretes e visitas; pode ser repetido sem erro)
    5. `supabase/migrations/005_imoveis_compartilhados.sql` (imóveis visíveis para todos os usuários; só quem cadastrou altera ou exclui; pode ser repetido sem erro)
+   6. `supabase/migrations/006_imoveis_endereco.sql` (campo de endereço — rua e número — do imóvel, usado pelo botão "Ver no mapa"; pode ser repetido sem erro)
 3. Em **Project Settings → API**, copie a URL e a chave `anon`.
 4. Neste projeto:
 
@@ -43,6 +44,10 @@ Cloudflare Pages ou Netlify: conecte o repositório, comando de build `npm run b
 - Botão **Quadro / Lista**: a lista mostra todos os leads em tabela, inclusive os concluídos e perdidos, com filtro por situação (em atendimento, concluídos, perdidos) e por origem, ordenação por coluna e páginas de 25. A escolha fica lembrada no navegador
 - Segurança por linha (RLS): leads, visitas e lembretes são privados de cada usuário. Os imóveis são visíveis para todos os usuários logados (com o corretor responsável), mas só quem cadastrou o imóvel pode alterá-lo ou excluí-lo
 - Tela de detalhes do imóvel em 4 abas (as mesmas do formulário), mostrando todos os campos, inclusive os não preenchidos
+- Na tela de detalhes: botões para trocar a **disponibilidade** (Disponível, Reservado, Vendido/Alugado) com um clique, só para quem cadastrou o imóvel, e botão **Ver no mapa** que abre o Google Maps já pesquisando o endereço cadastrado (rua e número, bairro e cidade; sem rua, abre o bairro)
+- **Aviso de duplicados**: ao cadastrar ou alterar um lead, avisa se já existe outro com o mesmo telefone (ignora formatação, +55 e nono dígito) ou e-mail; ao cadastrar um imóvel, avisa se já existe outro no mesmo endereço exato (rua e número, ignorando maiúsculas, acentos e abreviações como "R." e "nº"). O aviso mostra o cadastro existente e permite corrigir, abrir ou "Salvar mesmo assim". Só checa quando o contato/endereço é novo ou mudou
+- **Avisos da agenda**: um selo de sino sobre o menu "Agenda" mostra quantos compromissos (visitas e retornos) estão atrasados, são de hoje ou dos próximos 2 dias (vermelho se há atrasado ou de hoje). Ao entrar, uma janelinha no canto da tela lista o que está marcado para hoje: aparece em fade suave, não bloqueia a tela nem toma o foco e só sai quando o usuário fecha (uma vez fechada, não volta ao recarregar no mesmo dia, nesta aba). Atualiza sozinha a cada 5 minutos e ao concluir itens
+- Paleta da marca: fundo areia/creme com destaques em verde profundo; o tema escuro usa o verde como fundo
   - Cada campo tem um lápis: clique, altere só aquele valor e salve (Enter), ou cancele (Esc). Só as colunas daquele campo são gravadas
   - Campos que se influenciam são editados juntos (finalidade com valores, condomínio, elevador) e as características são editadas por grupo
   - Na edição de um campo só valem as obrigatoriedades relacionadas a ele, então um imóvel antigo sem proprietário continua editável nos demais campos
@@ -53,10 +58,12 @@ Cloudflare Pages ou Netlify: conecte o repositório, comando de build `npm run b
   - Corretor responsável (padrão: o usuário logado; já aceita outros corretores)
   - Condomínio, IPTU, padrão, financiamento, exclusividade, posição, áreas, dormitórios, vagas, elevador, 34 características e 20 tipos de piso
 - Rascunho automático no cadastro de imóvel novo: salvo no navegador a cada alteração (válido por 14 dias, separado por usuário) e recuperado ao reabrir, mesmo após o computador desligar. "Continuar depois" fecha mantendo o rascunho; fechar ou "Descartar" pede confirmação
-- Fotos dos imóveis (até 12 por imóvel, com escolha da capa), comprimidas no navegador antes do envio
+- Fotos dos imóveis (até 40 por imóvel, com escolha da capa), comprimidas no navegador antes do envio
   - Reordenar arrastando ou pelas setas; a primeira foto é a capa
+- **Esqueci minha senha** na tela de entrada (link por e-mail) e **Alterar senha** em "Meu perfil" (pede a senha atual; nova senha com 8+ caracteres, letras e números). Para o link funcionar, no Supabase cadastre o endereço do site em Authentication → URL Configuration (Site URL e Redirect URLs)
+- Filtro por bairro na lista de imóveis (junta "centro", "Centro" e "CENTRO" e mostra a quantidade de cada bairro)
+- Troca de página e de abas com fade suave, no mesmo estilo das janelas (respeita a preferência de reduzir movimento do sistema)
 - **Meu perfil** (nome na barra superior): define o nome do corretor, usado nas mensagens de WhatsApp e na ficha dos imóveis
-- Visual na paleta do kit de marca (verde profundo, bronze, creme e areia), com modo escuro
 - Listagem em cards com busca por título/bairro/cidade e filtros por finalidade, tipo e situação
 
 ### Leads, agenda e WhatsApp

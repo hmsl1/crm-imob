@@ -4,6 +4,7 @@ import { agendaPorFaixa } from '../lib/agenda.js'
 import { STATUS_VISITA, montarMensagem, quandoCurto } from '../lib/lead.js'
 import { abrirWhatsapp } from '../lib/whatsapp.js'
 import { useNomeDoCorretor } from '../lib/corretor.js'
+import { useAvisos } from '../lib/avisosContexto.js'
 import Topo from './Topo.jsx'
 import LeadModal from './LeadModal.jsx'
 
@@ -17,6 +18,7 @@ export default function Agenda({ usuario, pagina, onPagina }) {
   const [erro, setErro] = useState('')
   const [aberto, setAberto] = useState(null) // { lead, aba }
   const { nome: corretor } = useNomeDoCorretor(usuario)
+  const { recarregar: recarregarAvisos } = useAvisos()
 
   const carregar = useCallback(async () => {
     const [v, l] = await Promise.all([
@@ -39,7 +41,10 @@ export default function Agenda({ usuario, pagina, onPagina }) {
   async function executar(promessa) {
     const { error } = await promessa
     if (error) setErro(error.message)
-    else await carregar()
+    else {
+      await carregar()
+      recarregarAvisos()
+    }
   }
 
   const concluirLembrete = (id) =>
@@ -128,10 +133,15 @@ export default function Agenda({ usuario, pagina, onPagina }) {
           lead={aberto.lead}
           usuario={usuario}
           abaInicial={aberto.aba}
-          onFechar={() => setAberto(null)}
+          onFechar={() => {
+            setAberto(null)
+            carregar()
+            recarregarAvisos()
+          }}
           onSalvo={() => {
             setAberto(null)
             carregar()
+            recarregarAvisos()
           }}
         />
       )}
