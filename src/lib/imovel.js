@@ -23,6 +23,13 @@ export const STATUS_IMOVEL = [
   { id: 'vendido', rotulo: 'Vendido/Alugado' },
 ]
 
+// O valor do IPTU pode ser mensal ou anual: o corretor informa qual (não há como adivinhar)
+export const PERIODOS_IPTU = [
+  { id: 'mensal', rotulo: 'Mensal', sufixo: ' /mês', curto: '/mês' },
+  { id: 'anual', rotulo: 'Anual', sufixo: ' /ano', curto: '/ano' },
+]
+export const sufixoIptu = (periodo) => PERIODOS_IPTU.find((p) => p.id === periodo)?.sufixo ?? ''
+
 export const PADROES = [
   { id: 'baixo', rotulo: 'Baixo' },
   { id: 'medio', rotulo: 'Médio' },
@@ -39,6 +46,7 @@ export const POSICOES = [
   { id: 'frente', rotulo: 'Frente' },
   { id: 'lateral', rotulo: 'Lateral' },
   { id: 'fundos', rotulo: 'Fundos' },
+  { id: 'esquina', rotulo: 'Esquina' },
 ]
 
 export const POSICOES_SOLAR = [
@@ -163,6 +171,7 @@ export const FORM_VAZIO = {
   valor_aluguel: '',
   valor_condominio: '',
   valor_iptu: '',
+  iptu_periodo: '',
   sem_condominio: false,
   padrao: '',
   aceita_financiamento: '',
@@ -232,6 +241,7 @@ export function payloadDoForm(f) {
     valor_aluguel: temAluguel(f.finalidade) ? numero(f.valor_aluguel) : null,
     valor_condominio: f.sem_condominio ? null : numero(f.valor_condominio),
     valor_iptu: numero(f.valor_iptu),
+    iptu_periodo: numero(f.valor_iptu) !== null ? f.iptu_periodo || null : null, // sem valor, sem período
     sem_condominio: f.sem_condominio,
     padrao: f.padrao || null,
     aceita_financiamento: simNao(f.aceita_financiamento),
@@ -287,6 +297,11 @@ const REGRAS = [
     chaves: ['finalidade', 'valor_venda'],
     ok: (f) => !temVenda(f.finalidade) || valorPositivo(f.valor_venda),
     mensagem: 'Informe o valor de venda.',
+  },
+  {
+    chaves: ['valor_iptu', 'iptu_periodo'],
+    ok: (f) => numero(f.valor_iptu) === null || PERIODOS_IPTU.some((p) => p.id === f.iptu_periodo),
+    mensagem: 'Informe se o IPTU é mensal ou anual.',
   },
   {
     chaves: ['finalidade', 'valor_aluguel'],

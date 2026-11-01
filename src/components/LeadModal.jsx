@@ -4,6 +4,8 @@ import { TIPOS_IMOVEL } from '../lib/imovel.js'
 import {
   BUSCA_FINALIDADES,
   ORIGENS,
+  TIPOS_FECHAMENTO,
+  rotuloValorFechado,
   formDoLead,
   payloadDoLead,
   resumoDoPerfil,
@@ -176,10 +178,18 @@ export default function LeadModal({ lead, usuario, abaInicial = 'dados', onFecha
                 </div>
 
                 {form.status === 'fechado' && (
-                  <label>
-                    Valor da venda (R$)
-                    <input type="number" min="0" step="0.01" value={form.valor_fechado} onChange={campo('valor_fechado')} />
-                  </label>
+                  <div className="duas">
+                    <label>
+                      Tipo de negócio
+                      <select value={form.fechado_tipo} onChange={campo('fechado_tipo')}>
+                        <Opcoes lista={TIPOS_FECHAMENTO} />
+                      </select>
+                    </label>
+                    <label>
+                      {rotuloValorFechado(form.fechado_tipo)}
+                      <input type="number" inputMode="decimal" min="0" step="0.01" value={form.valor_fechado} onChange={campo('valor_fechado')} />
+                    </label>
+                  </div>
                 )}
 
                 <label>

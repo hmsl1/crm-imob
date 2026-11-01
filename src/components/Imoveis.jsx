@@ -1,11 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { TIPOS_IMOVEL, STATUS_IMOVEL, FINALIDADES, atendeFinalidade } from '../lib/imovel.js'
 import { precosDoImovel } from '../lib/format.js'
 import { bairrosDosImoveis, atendeBairro } from '../lib/bairros.js'
 import Topo from './Topo.jsx'
-import ImovelModal from './ImovelModal.jsx'
-import ImovelDetalhes from './ImovelDetalhes.jsx'
+import { ImovelModal, ImovelDetalhes } from '../componentesPreguicosos.js'
 
 const rotulo = (lista, id) => lista.find((i) => i.id === id)?.rotulo ?? id
 
@@ -168,7 +167,7 @@ export default function Imoveis({ usuario, pagina, onPagina }) {
               >
                 <div className="foto">
                   {i.fotos?.[0] ? (
-                    <img src={i.fotos[0]} alt={i.titulo} loading="lazy" />
+                    <img src={i.fotos[0]} alt={i.titulo} loading="lazy" decoding="async" />
                   ) : (
                     <span>Sem foto</span>
                   )}
@@ -208,6 +207,7 @@ export default function Imoveis({ usuario, pagina, onPagina }) {
         </main>
       )}
 
+      <Suspense fallback={null}>
       {aberto?.modo === 'ver' && imovelAberto && (
         <ImovelDetalhes
           imovel={imovelAberto}
@@ -236,6 +236,7 @@ export default function Imoveis({ usuario, pagina, onPagina }) {
           onSalvo={aoSalvar}
         />
       )}
+      </Suspense>
     </div>
   )
 }

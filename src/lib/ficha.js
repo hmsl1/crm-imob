@@ -1,6 +1,6 @@
 // Texto da "ficha" do imóvel para enviar por WhatsApp. Nunca inclui dados do proprietário.
 import { moeda, precosDoImovel } from './format.js'
-import { TIPOS_IMOVEL, GRUPOS_CARACTERISTICAS } from './imovel.js'
+import { TIPOS_IMOVEL, GRUPOS_CARACTERISTICAS, sufixoIptu } from './imovel.js'
 
 const plural = (n, singular, plural) => `${n} ${n === 1 ? singular : plural}`
 
@@ -40,7 +40,7 @@ export function fichaDoImovel(i, { corretor = '' } = {}) {
   const custos = []
   if (i.sem_condominio) custos.push('Sem condomínio')
   else if (i.valor_condominio != null) custos.push(`Condomínio: ${moeda(i.valor_condominio)}/mês`)
-  if (i.valor_iptu != null) custos.push(`IPTU: ${moeda(i.valor_iptu)}`)
+  if (i.valor_iptu != null) custos.push(`IPTU: ${moeda(i.valor_iptu)}${sufixoIptu(i.iptu_periodo).replace(' ', '')}`)
   if (custos.length) linhas.push(custos.join(' · '))
 
   const specs = []

@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase.js'
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import Marca from './Marca.jsx'
-import PerfilModal from './PerfilModal.jsx'
+import { PerfilModal } from '../componentesPreguicosos.js'
 import { useNomeDoCorretor } from '../lib/corretor.js'
 import { useAvisos } from '../lib/avisosContexto.js'
 import { resumoDosAvisos } from '../lib/avisos.js'
@@ -57,7 +57,9 @@ export default function Topo({ usuario, pagina, onPagina, children }) {
         Sair
       </button>
     </header>
-    {perfil && <PerfilModal usuario={usuario} nomeAtual={cadastrado ? nome : ''} onFechar={() => setPerfil(false)} />}
+    <Suspense fallback={null}>
+      {perfil && <PerfilModal usuario={usuario} nomeAtual={cadastrado ? nome : ''} onFechar={() => setPerfil(false)} />}
+    </Suspense>
     </>
   )
 }

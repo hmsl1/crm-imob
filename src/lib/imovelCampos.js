@@ -6,6 +6,7 @@ import {
   FINALIDADES,
   STATUS_IMOVEL,
   PADROES,
+  sufixoIptu,
   ESTADOS_IMOVEL,
   POSICOES,
   POSICOES_SOLAR,
@@ -66,7 +67,7 @@ export const CAMPOS_POR_ABA = {
         campo('valor_venda', 'Valor de venda', 'moeda', { visivel: (i) => temVenda(i.finalidade) }),
         campo('valor_aluguel', 'Valor do aluguel', 'moeda', { sufixo: ' /mês', visivel: (i) => temAluguel(i.finalidade) }),
         campo('condominio', 'Condomínio', 'condominio', { chaves: ['sem_condominio', 'valor_condominio'] }),
-        campo('valor_iptu', 'IPTU', 'moeda'),
+        campo('valor_iptu', 'IPTU', 'iptu', { chaves: ['valor_iptu', 'iptu_periodo'] }),
         campo('padrao', 'Padrão do imóvel', 'select', { opcoes: PADROES, ...SELECT_OPCIONAL }),
         campo('aceita_financiamento', 'Aceita financiamento', 'simnao'),
         campo('exclusividade', 'Exclusividade', 'simnao'),
@@ -132,6 +133,8 @@ export function exibirCampo(c, i, ctx = {}) {
       return vazio(v) ? null : String(v)
     case 'moeda':
       return vazio(v) ? null : moeda(v) + (c.sufixo ?? '')
+    case 'iptu':
+      return vazio(v) ? null : moeda(v) + sufixoIptu(i.iptu_periodo)
     case 'm2':
       return vazio(v) ? null : `${Number(v)} m²`
     case 'select':

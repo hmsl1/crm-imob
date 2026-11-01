@@ -5,6 +5,7 @@ import {
   FINALIDADES,
   STATUS_IMOVEL,
   PADROES,
+  PERIODOS_IPTU,
   ESTADOS_IMOVEL,
   POSICOES,
   POSICOES_SOLAR,
@@ -417,7 +418,7 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
                     )}
                   </div>
                 )}
-                <div className="duas">
+                <div className="tres">
                   <label>
                     Condomínio (R$/mês)
                     <input
@@ -430,7 +431,13 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
                   </label>
                   <label>
                     IPTU (R$)
-                    <input type="number" min="0" step="0.01" {...texto('valor_iptu')} />
+                    <input type="number" inputMode="decimal" min="0" step="0.01" {...texto('valor_iptu')} />
+                  </label>
+                  <label>
+                    IPTU: valor
+                    <select {...texto('iptu_periodo')}>
+                      <Opcoes lista={PERIODOS_IPTU} vazio="Selecione" />
+                    </select>
                   </label>
                 </div>
                 <label className="check">

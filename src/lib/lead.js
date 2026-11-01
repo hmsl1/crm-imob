@@ -27,6 +27,21 @@ export const BUSCA_FINALIDADES = [
   { id: 'aluguel', rotulo: 'Alugar' },
 ]
 
+// Lead fechado: foi uma venda ou um aluguel? O campo de valor muda de acordo.
+export const TIPOS_FECHAMENTO = [
+  { id: 'venda', rotulo: 'Venda', rotuloValor: 'Valor da venda (R$)', sufixo: '' },
+  { id: 'aluguel', rotulo: 'Aluguel', rotuloValor: 'Valor do aluguel (R$/mês)', sufixo: ' /mês' },
+]
+const tipoFechamento = (id) => TIPOS_FECHAMENTO.find((t) => t.id === id) ?? TIPOS_FECHAMENTO[0] // sem tipo (lead antigo) = venda
+
+export const rotuloValorFechado = (id) => tipoFechamento(id).rotuloValor
+
+// "R$ 450.000" (venda) ou "R$ 2.500 /mês" (aluguel); null se o lead não está fechado ou não tem valor
+export function valorFechadoTexto(lead) {
+  if (lead?.status !== 'fechado' || lead.valor_fechado == null) return null
+  return moeda(lead.valor_fechado) + tipoFechamento(lead.fechado_tipo).sufixo
+}
+
 export const LEAD_FORM_VAZIO = {
   nome: '',
   telefone: '',
@@ -35,6 +50,7 @@ export const LEAD_FORM_VAZIO = {
   origem: 'manual',
   observacoes: '',
   valor_fechado: '',
+  fechado_tipo: 'venda',
   consentimento_lgpd: false,
   // perfil de busca
   busca_finalidade: '',
@@ -68,6 +84,10 @@ export function payloadDoLead(f, leadOriginal = null) {
     origem: f.origem,
     observacoes: f.observacoes || null,
     valor_fechado: f.status === 'fechado' ? numero(f.valor_fechado) : null,
+    // só envia o tipo quando há o que gravar ou limpar (assim o resto do cadastro não depende da migração 007)
+    ...(f.status === 'fechado' || leadOriginal?.fechado_tipo != null
+      ? { fechado_tipo: f.status === 'fechado' ? (f.fechado_tipo === 'aluguel' ? 'aluguel' : 'venda') : null }
+      : {}),
     consentimento_lgpd: f.consentimento_lgpd,
     consentimento_em: f.consentimento_lgpd ? (leadOriginal?.consentimento_em ?? new Date().toISOString()) : null,
 

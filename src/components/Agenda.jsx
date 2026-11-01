@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { agendaPorFaixa } from '../lib/agenda.js'
 import { STATUS_VISITA, montarMensagem, quandoCurto } from '../lib/lead.js'
@@ -6,7 +6,7 @@ import { abrirWhatsapp } from '../lib/whatsapp.js'
 import { useNomeDoCorretor } from '../lib/corretor.js'
 import { useAvisos } from '../lib/avisosContexto.js'
 import Topo from './Topo.jsx'
-import LeadModal from './LeadModal.jsx'
+import { LeadModal } from '../componentesPreguicosos.js'
 
 const RESULTADOS = STATUS_VISITA.filter((s) => s.id !== 'agendada')
 
@@ -127,6 +127,7 @@ export default function Agenda({ usuario, pagina, onPagina }) {
         ))}
       </main>
 
+      <Suspense fallback={null}>
       {aberto && (
         <LeadModal
           key={aberto.lead.id}
@@ -145,6 +146,7 @@ export default function Agenda({ usuario, pagina, onPagina }) {
           }}
         />
       )}
+      </Suspense>
     </div>
   )
 }

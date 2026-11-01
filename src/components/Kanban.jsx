@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { supabase, ETAPAS } from '../lib/supabase.js'
-import LeadModal from './LeadModal.jsx'
+import { LeadModal } from '../componentesPreguicosos.js'
 import Topo from './Topo.jsx'
 import { linkWhatsapp } from '../lib/format.js'
 import { rotuloOrigem, quandoCurto, faixaDoDia } from '../lib/lead.js'
@@ -24,6 +24,8 @@ export default function Kanban({ usuario, pagina, onPagina }) {
   const [erro, setErro] = useState('')
   const [busca, setBusca] = useState('')
   const [visao, setVisao] = useState(lerVisao) // 'quadro' | 'lista'
+  // arrastar e soltar só funciona com mouse; no toque cada card tem o seletor "Mover para"
+  const [podeArrastar] = useState(() => !globalThis.matchMedia || globalThis.matchMedia('(pointer: fine)').matches)
   const [arrastando, setArrastando] = useState(null)
   const [colunaAlvo, setColunaAlvo] = useState(null)
   const [aberto, setAberto] = useState(null) // null | { lead, aba }
@@ -53,7 +55,9 @@ export default function Kanban({ usuario, pagina, onPagina }) {
     carregar()
   }, [carregar])
 
-  const filtrados = useMemo(() => filtrarLeads(leads, { busca }), [leads, busca])
+  // digitar na busca não trava no celular: a lista filtra logo depois, sem segurar o teclado
+  const buscaAdiada = useDeferredValue(busca)
+  const filtrados = useMemo(() => filtrarLeads(leads, { busca: buscaAdiada }), [leads, buscaAdiada])
 
   function mudarVisao(nova) {
     setVisao(nova)
@@ -118,7 +122,7 @@ export default function Kanban({ usuario, pagina, onPagina }) {
       {carregando ? (
         <div className="centro">Carregando leads…</div>
       ) : visao === 'lista' ? (
-        <LeadLista leads={leads} busca={busca} onAbrir={(lead) => setAberto({ lead, aba: 'dados' })} />
+        <LeadLista leads={leads} busca={buscaAdiada} onAbrir={(lead) => setAberto({ lead, aba: 'dados' })} />
       ) : (
         <main className="quadro">
           {ETAPAS.map((etapa) => {
@@ -142,7 +146,7 @@ export default function Kanban({ usuario, pagina, onPagina }) {
                     <article
                       key={lead.id}
                       className={'lead' + (arrastando === lead.id ? ' arrastando' : '')}
-                      draggable
+                      draggable={podeArrastar}
                       onDragStart={() => setArrastando(lead.id)}
                       onDragEnd={() => {
                         setArrastando(null)
@@ -153,6 +157,19 @@ export default function Kanban({ usuario, pagina, onPagina }) {
                       <strong>{lead.nome}</strong>
                       {lead.telefone && <span>{lead.telefone}</span>}
                       <Selos proximo={proximos[lead.id]} />
+                      <select
+                        className="mover-etapa"
+                        aria-label={`Mover ${lead.nome} para outra etapa`}
+                        value={lead.status}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => mover(lead, e.target.value)}
+                      >
+                        {ETAPAS.map((e) => (
+                          <option key={e.id} value={e.id}>
+                            {e.id === lead.status ? `Etapa: ${e.rotulo}` : `Mover para ${e.rotulo}`}
+                          </option>
+                        ))}
+                      </select>
                       <div className="rodape-lead">
                         <span className="etiqueta">{rotuloOrigem(lead.origem)}</span>
                         {lead.telefone && (
@@ -179,6 +196,7 @@ export default function Kanban({ usuario, pagina, onPagina }) {
         </main>
       )}
 
+      <Suspense fallback={null}>
       {aberto && (
         <LeadModal
           key={aberto.lead?.id ?? 'novo'}
@@ -198,6 +216,7 @@ export default function Kanban({ usuario, pagina, onPagina }) {
           }}
         />
       )}
+      </Suspense>
     </div>
   )
 }

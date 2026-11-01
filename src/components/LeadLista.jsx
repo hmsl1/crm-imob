@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ETAPAS } from '../lib/supabase.js'
-import { moeda, linkWhatsapp } from '../lib/format.js'
-import { ORIGENS, rotuloOrigem, resumoDoPerfil } from '../lib/lead.js'
+import { linkWhatsapp } from '../lib/format.js'
+import { ORIGENS, rotuloOrigem, resumoDoPerfil, valorFechadoTexto } from '../lib/lead.js'
 import { GRUPOS_ETAPA, contarPorGrupo, filtrarLeads, ordenarLeads, paginar } from '../lib/leadLista.js'
 import Opcoes from './Opcoes.jsx'
 
@@ -11,10 +11,10 @@ const data = (iso) => (iso ? new Date(iso).toLocaleDateString('pt-BR') : '—')
 const COLUNAS = [
   { chave: 'nome', rotulo: 'Nome' },
   { chave: 'etapa', rotulo: 'Etapa' },
-  { chave: 'origem', rotulo: 'Origem' },
-  { chave: null, rotulo: 'Telefone' },
-  { chave: null, rotulo: 'Procura' },
-  { chave: 'criado', rotulo: 'Cadastro' },
+  { chave: 'origem', rotulo: 'Origem', sec: true },
+  { chave: null, rotulo: 'Telefone', sec: true },
+  { chave: null, rotulo: 'Procura', sec: true },
+  { chave: 'criado', rotulo: 'Cadastro', sec: true },
   { chave: 'valor', rotulo: 'Valor fechado' },
 ]
 
@@ -62,7 +62,7 @@ export default function LeadLista({ leads, busca, onAbrir }) {
             <thead>
               <tr>
                 {COLUNAS.map((c) => (
-                  <th key={c.rotulo} aria-sort={c.chave && ordem.chave === c.chave ? (ordem.direcao === 'asc' ? 'ascending' : 'descending') : undefined}>
+                  <th key={c.rotulo} className={c.sec ? 'col-sec' : undefined} aria-sort={c.chave && ordem.chave === c.chave ? (ordem.direcao === 'asc' ? 'ascending' : 'descending') : undefined}>
                     {c.chave ? (
                       <button type="button" className="link ordenar" onClick={() => ordenarPor(c.chave)}>
                         {c.rotulo}
@@ -87,11 +87,11 @@ export default function LeadLista({ leads, busca, onAbrir }) {
                   <td>
                     <span className={'etapa-tag ' + lead.status}>{rotuloEtapa(lead.status)}</span>
                   </td>
-                  <td>{rotuloOrigem(lead.origem)}</td>
-                  <td>{lead.telefone ?? '—'}</td>
-                  <td className="procura" title={resumoDoPerfil(lead)}>{resumoDoPerfil(lead) || '—'}</td>
-                  <td>{data(lead.created_at)}</td>
-                  <td>{lead.status === 'fechado' && lead.valor_fechado != null ? moeda(lead.valor_fechado) : '—'}</td>
+                  <td className="col-sec">{rotuloOrigem(lead.origem)}</td>
+                  <td className="col-sec">{lead.telefone ?? '—'}</td>
+                  <td className="procura col-sec" title={resumoDoPerfil(lead)}>{resumoDoPerfil(lead) || '—'}</td>
+                  <td className="col-sec">{data(lead.created_at)}</td>
+                  <td>{valorFechadoTexto(lead) ?? '—'}</td>
                   <td>
                     {lead.telefone && (
                       <a className="btn-whatsapp" href={linkWhatsapp(lead.telefone)} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>

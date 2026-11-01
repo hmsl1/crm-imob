@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { Suspense, useEffect, useMemo, useRef } from 'react'
 import Kanban from './Kanban.jsx'
-import Imoveis from './Imoveis.jsx'
-import Agenda from './Agenda.jsx'
+import { Imoveis, Agenda, precarregarRestante } from '../componentesPreguicosos.js'
 import AvisoHoje from './AvisoHoje.jsx'
 import { AvisosContexto } from '../lib/avisosContexto.js'
 import { useAvisosAgenda } from '../lib/useAvisosAgenda.js'
@@ -18,11 +17,15 @@ export default function AreaLogada({ usuario, pagina, saindoPagina, onPagina }) 
     else recarregar()
   }, [pagina, recarregar])
 
+  useEffect(() => precarregarRestante(), [])
+
   const props = { usuario, pagina, onPagina }
   return (
     <AvisosContexto.Provider value={valor}>
       <div className={'pagina' + (saindoPagina ? ' saindo' : '')}>
-        {pagina === 'imoveis' ? <Imoveis {...props} /> : pagina === 'agenda' ? <Agenda {...props} /> : <Kanban {...props} />}
+        <Suspense fallback={<div className="centro">Carregando…</div>}>
+          {pagina === 'imoveis' ? <Imoveis {...props} /> : pagina === 'agenda' ? <Agenda {...props} /> : <Kanban {...props} />}
+        </Suspense>
       </div>
       <AvisoHoje usuarioId={usuario.id} hoje={avisos.hoje} carregado={carregado} onVerAgenda={() => onPagina('agenda')} />
     </AvisosContexto.Provider>

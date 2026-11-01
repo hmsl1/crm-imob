@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase.js'
-import { FINALIDADES, temVenda, temAluguel } from '../lib/imovel.js'
+import { FINALIDADES, PERIODOS_IPTU, temVenda, temAluguel } from '../lib/imovel.js'
 import { exibirCampo, marcadosDoGrupo, rascunhoInicial, calcularAtualizacao } from '../lib/imovelCampos.js'
 import { linkWhatsapp } from '../lib/format.js'
 import { linkMapa, enderecoExato } from '../lib/mapa.js'
@@ -235,6 +235,21 @@ function CorpoEditor({ campo, rascunho, definir, corretores }) {
           )}
           <p className="dica">O valor que não se aplica à finalidade escolhida é removido ao salvar.</p>
         </>
+      )
+    case 'iptu':
+      return (
+        <div className="duas">
+          <label>
+            IPTU (R$)
+            <input autoFocus type="number" inputMode="decimal" min="0" step="0.01" value={rascunho.valor_iptu} onChange={(e) => definir('valor_iptu', e.target.value)} />
+          </label>
+          <label>
+            O valor é
+            <select value={rascunho.iptu_periodo} onChange={(e) => definir('iptu_periodo', e.target.value)}>
+              <Opcoes lista={PERIODOS_IPTU} vazio="Selecione" />
+            </select>
+          </label>
+        </div>
       )
     case 'condominio':
       return (

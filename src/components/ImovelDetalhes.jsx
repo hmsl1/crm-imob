@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { TIPOS_IMOVEL, FINALIDADES, ABAS_IMOVEL } from '../lib/imovel.js'
 import { CAMPOS_POR_ABA } from '../lib/imovelCampos.js'
 import { precosDoImovel } from '../lib/format.js'
@@ -27,6 +27,18 @@ export default function ImovelDetalhes({ imovel, corretores, existentes = [], so
     onAba(id)
   }
   const irFoto = (passo) => setAtual((f) => (f + passo + total) % total)
+
+  // passar as fotos com o dedo: arrastar para a esquerda/direita (mais de 40 px, sobretudo na horizontal)
+  const toque = useRef(null)
+  const aoTocar = (e) => (toque.current = { x: e.touches[0].clientX, y: e.touches[0].clientY })
+  const aoSoltarToque = (e) => {
+    const ini = toque.current
+    toque.current = null
+    if (!ini || total < 2) return
+    const dx = e.changedTouches[0].clientX - ini.x
+    const dy = e.changedTouches[0].clientY - ini.y
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) irFoto(dx < 0 ? 1 : -1)
+  }
 
   // Teclado: Esc cancela a edição em andamento (ou fecha a janela); setas trocam a foto na aba de fotos,
   // mas só quando você não está digitando em um campo
@@ -144,9 +156,9 @@ export default function ImovelDetalhes({ imovel, corretores, existentes = [], so
               )}
             </div>
             <div className="galeria">
-              <div className="galeria-principal">
+              <div className="galeria-principal" onTouchStart={aoTocar} onTouchEnd={aoSoltarToque}>
                 {total > 0 ? (
-                  <img src={fotos[atual] ?? fotos[0]} alt={`${imovel.titulo}, foto ${atual + 1}`} />
+                  <img src={fotos[atual] ?? fotos[0]} alt={`${imovel.titulo}, foto ${atual + 1}`} decoding="async" draggable={false} />
                 ) : (
                   <span>Sem fotos</span>
                 )}
@@ -174,7 +186,7 @@ export default function ImovelDetalhes({ imovel, corretores, existentes = [], so
                       aria-label={`Ver foto ${idx + 1}`}
                       onClick={() => setAtual(idx)}
                     >
-                      <img src={url} alt="" loading="lazy" />
+                      <img src={url} alt="" loading="lazy" decoding="async" />
                     </button>
                   ))}
                 </div>
