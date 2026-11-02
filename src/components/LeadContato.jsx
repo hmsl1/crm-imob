@@ -10,6 +10,7 @@ import {
   validarLembrete,
 } from '../lib/lead.js'
 import { abrirWhatsapp } from '../lib/whatsapp.js'
+import { comCodigo } from '../lib/imovel.js'
 
 const ATALHOS = [
   { rotulo: 'Amanhã', dias: 1 },
@@ -160,7 +161,7 @@ export default function LeadContato({ lead, corretor, dados, onMudou, onErro }) 
               <option value="">Sem imóvel específico</option>
               {vinculos.map((i) => (
                 <option key={i.id} value={i.id}>
-                  {i.titulo}
+                  {comCodigo(i)}
                 </option>
               ))}
             </select>
@@ -196,7 +197,7 @@ export default function LeadContato({ lead, corretor, dados, onMudou, onErro }) 
           {interacoes.map((i) => (
             <li key={i.id}>
               <time>{new Date(i.created_at).toLocaleString('pt-BR')}</time>
-              <span className={'tipo ' + i.tipo}>{i.tipo === 'mudanca_status' ? 'etapa' : i.tipo}</span>
+              <span className={'tipo ' + i.tipo}>{i.tipo === 'mudanca_status' ? 'etapa' : i.tipo === 'transferencia' ? 'transferência' : i.tipo}</span>
               {i.texto}
             </li>
           ))}

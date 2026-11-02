@@ -30,6 +30,7 @@ export function fichaDoImovel(i, { corretor = '' } = {}) {
   const onde = [i.bairro, i.cidade].filter(Boolean).join(', ')
   const local = [tipo, onde].filter(Boolean).join(' · ')
   if (local) linhas.push(local)
+  if (i.codigo) linhas.push(`Código: ${i.codigo}`)
 
   const precos = precosDoImovel(i)
   if (precos.length) {

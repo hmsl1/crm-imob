@@ -1,4 +1,4 @@
-// Telas e janelas carregadas sob demanda: o primeiro acesso baixa só o essencial (login, leads e barra superior),
+// Telas e janelas carregadas sob demanda: o primeiro acesso baixa só o essencial (login, dashboard, leads e barra superior),
 // o que deixa a abertura bem mais rápida no celular. Depois que a tela principal aparece, o resto é baixado
 // em segundo plano, então navegar e abrir janelas continua instantâneo.
 import { lazy } from 'react'
@@ -10,13 +10,15 @@ function preguicoso(carregar) {
 }
 
 export const Imoveis = preguicoso(() => import('./components/Imoveis.jsx'))
+export const MetasModal = preguicoso(() => import('./components/MetasModal.jsx'))
 export const Agenda = preguicoso(() => import('./components/Agenda.jsx'))
+export const EtapaModal = preguicoso(() => import('./components/EtapaModal.jsx'))
 export const LeadModal = preguicoso(() => import('./components/LeadModal.jsx'))
 export const ImovelModal = preguicoso(() => import('./components/ImovelModal.jsx'))
 export const ImovelDetalhes = preguicoso(() => import('./components/ImovelDetalhes.jsx'))
 export const PerfilModal = preguicoso(() => import('./components/PerfilModal.jsx'))
 
-const TODOS = [Imoveis, Agenda, LeadModal, ImovelDetalhes, ImovelModal, PerfilModal]
+const TODOS = [Imoveis, Agenda, MetasModal, EtapaModal, LeadModal, ImovelDetalhes, ImovelModal, PerfilModal]
 
 // Baixa o restante quando o navegador está ocioso (e não gasta dados no modo "economia de dados")
 export function precarregarRestante() {

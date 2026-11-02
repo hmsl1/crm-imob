@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase.js'
-import { TIPOS_IMOVEL } from '../lib/imovel.js'
+import { TIPOS_IMOVEL, comCodigo } from '../lib/imovel.js'
 import { precosDoImovel } from '../lib/format.js'
 import { STATUS_VISITA, deInputLocal, quandoCurto, validarVisita } from '../lib/lead.js'
 import { abrirWhatsapp } from '../lib/whatsapp.js'
@@ -70,7 +70,7 @@ export default function LeadImoveis({ lead, corretor, dados, onMudou, onErro, on
             return (
               <li key={i.id}>
                 <div className="item-info">
-                  <strong>{i.titulo}</strong>
+                  <strong>{comCodigo(i)}</strong>
                   <span className="suave">
                     {[rotuloTipo(i.tipo), i.bairro, precos].filter(Boolean).join(' · ')}
                   </span>
@@ -100,7 +100,7 @@ export default function LeadImoveis({ lead, corretor, dados, onMudou, onErro, on
             <option value="">{livres.length ? 'Escolha um imóvel…' : 'Sem outros imóveis cadastrados'}</option>
             {livres.map((i) => (
               <option key={i.id} value={i.id}>
-                {i.titulo}
+                {comCodigo(i)}
               </option>
             ))}
           </select>
@@ -116,7 +116,7 @@ export default function LeadImoveis({ lead, corretor, dados, onMudou, onErro, on
           {visitas.map((v) => (
             <li key={v.id}>
               <div className="item-info">
-                <strong>{v.imoveis?.titulo ?? 'Imóvel removido'}</strong>
+                <strong>{v.imoveis ? comCodigo(v.imoveis) : 'Imóvel removido'}</strong>
                 <span className="suave">
                   {quandoCurto(v.quando)}
                   {v.observacoes ? ` · ${v.observacoes}` : ''}
@@ -165,7 +165,7 @@ export default function LeadImoveis({ lead, corretor, dados, onMudou, onErro, on
                 <option value="">Escolha…</option>
                 {[...vinculos, ...livres].map((i) => (
                   <option key={i.id} value={i.id}>
-                    {i.titulo}
+                    {comCodigo(i)}
                   </option>
                 ))}
               </select>

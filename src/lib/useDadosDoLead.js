@@ -12,7 +12,7 @@ export function useDadosDoLead(leadId) {
     if (!leadId) return
     const respostas = await Promise.all([
       supabase.from('lead_imovel').select('imovel_id, imoveis(*)').eq('lead_id', leadId),
-      supabase.from('visitas').select('*, imoveis(id, titulo)').eq('lead_id', leadId).order('quando'),
+      supabase.from('visitas').select('*, imoveis(id, titulo, codigo)').eq('lead_id', leadId).order('quando'),
       supabase.from('lembretes').select('*').eq('lead_id', leadId).order('quando'),
       supabase.from('interacoes').select('*').eq('lead_id', leadId).order('created_at', { ascending: false }),
       supabase.from('imoveis').select('*').order('titulo'),

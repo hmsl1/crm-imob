@@ -57,7 +57,7 @@ export const CAMPOS_POR_ABA = {
         campo('endereco', 'Endereço', 'texto', { mapa: true }),
         campo('bairro', 'Bairro', 'texto'),
         campo('cidade', 'Cidade', 'texto'),
-        campo('corretor_id', 'Corretor responsável', 'corretor'),
+        campo('captador_id', 'Captador', 'corretor'),
       ],
     },
     {
@@ -144,7 +144,7 @@ export function exibirCampo(c, i, ctx = {}) {
     case 'bool':
       return v ? 'Sim' : 'Não'
     case 'corretor':
-      return ctx.corretores?.find((x) => x.id === i.corretor_id)?.nome ?? null
+      return ctx.corretores?.find((x) => x.id === i.captador_id)?.nome ?? null
     case 'finalidade':
       return rotuloDe(FINALIDADES, i.finalidade)
     case 'condominio':

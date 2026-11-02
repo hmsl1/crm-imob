@@ -9,7 +9,7 @@ import { abriuPorRecuperacao } from './lib/senha.js'
 export default function App() {
   const [sessao, setSessao] = useState(null)
   const [carregando, setCarregando] = useState(configurado)
-  const [pagina, setPagina] = useState('leads') // leads | imoveis | agenda
+  const [pagina, setPagina] = useState('dashboard') // dashboard | leads | imoveis | agenda
   const [saindoPagina, setSaindoPagina] = useState(false)
   const timerPagina = useRef(null)
   const [recuperando, setRecuperando] = useState(abriuPorRecuperacao) // abriu pelo link de "esqueci a senha"

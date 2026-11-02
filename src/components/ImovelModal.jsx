@@ -135,7 +135,7 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
       const lista = data ?? []
       setCorretores(lista)
       // padrão: o corretor do próprio usuário logado
-      setForm((f) => (f.corretor_id ? f : { ...f, corretor_id: (lista.find((c) => c.e_proprio) ?? lista[0])?.id ?? '' }))
+      setForm((f) => (f.captador_id ? f : { ...f, captador_id: (lista.find((c) => c.e_proprio) ?? lista[0])?.id ?? '' }))
     }
     carregar()
     return () => {
@@ -146,18 +146,18 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
   async function escolherCorretor(e) {
     const valor = e.target.value
     if (valor !== NOVO_CORRETOR) {
-      setForm((f) => ({ ...f, corretor_id: valor }))
+      setForm((f) => ({ ...f, captador_id: valor }))
       return
     }
-    const nome = window.prompt('Nome do novo corretor:')?.trim()
+    const nome = window.prompt('Nome do novo captador:')?.trim()
     if (!nome) return
     const { data, error } = await supabase.from('corretores').insert({ nome }).select().single()
     if (error) {
-      setErro('Não foi possível adicionar o corretor: ' + error.message)
+      setErro('Não foi possível adicionar o captador: ' + error.message)
       return
     }
     setCorretores((lista) => [...lista, data])
-    setForm((f) => ({ ...f, corretor_id: data.id }))
+    setForm((f) => ({ ...f, captador_id: data.id }))
   }
 
   async function adicionarFotos(e) {
@@ -212,7 +212,7 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
   function descartarRascunho() {
     if (!window.confirm('Descartar este cadastro? O que você preencheu e as fotos enviadas serão apagados.')) return
     limparRascunho(usuario.id)
-    setForm((f) => ({ ...formDoImovel(null), corretor_id: f.corretor_id }))
+    setForm((f) => ({ ...formDoImovel(null), captador_id: f.captador_id }))
     setRecuperadoEm(null)
     setSalvoAutoEm(null)
     setAba('principal')
@@ -386,8 +386,8 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
                   </label>
                 </div>
                 <label>
-                  Corretor responsável
-                  <select value={form.corretor_id} onChange={escolherCorretor}>
+                  Captador
+                  <select value={form.captador_id} onChange={escolherCorretor}>
                     {corretores.length === 0 && <option value="">Carregando…</option>}
                     {corretores.map((c) => (
                       <option key={c.id} value={c.id}>
@@ -395,7 +395,7 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
                         {c.e_proprio ? ' (você)' : ''}
                       </option>
                     ))}
-                    <option value={NOVO_CORRETOR}>+ Adicionar corretor…</option>
+                    <option value={NOVO_CORRETOR}>+ Adicionar captador…</option>
                   </select>
                 </label>
               </section>

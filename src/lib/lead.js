@@ -2,6 +2,7 @@
 // Funções puras (sem React nem Supabase), fáceis de testar.
 import { moeda } from './format.js'
 import { TIPOS_IMOVEL } from './imovel.js'
+import { CAMPOS_ETAPA_VAZIOS, camposDaEtapa, colunasDaEtapa, entrandoNaEtapa, validarEtapa } from './etapa.js'
 
 // ---------------------------------------------------------------
 // Origem
@@ -49,8 +50,8 @@ export const LEAD_FORM_VAZIO = {
   status: 'novo',
   origem: 'manual',
   observacoes: '',
-  valor_fechado: '',
-  fechado_tipo: 'venda',
+  ...CAMPOS_ETAPA_VAZIOS, // motivo de perdido e dados do fechamento (ver etapa.js)
+  responsavel_id: '',
   consentimento_lgpd: false,
   // perfil de busca
   busca_finalidade: '',
@@ -69,6 +70,7 @@ export function formDoLead(lead) {
     const valor = lead[chave]
     if (valor !== null && valor !== undefined) form[chave] = valor
   }
+  Object.assign(form, camposDaEtapa(lead))
   return form
 }
 
@@ -83,11 +85,8 @@ export function payloadDoLead(f, leadOriginal = null) {
     status: f.status,
     origem: f.origem,
     observacoes: f.observacoes || null,
-    valor_fechado: f.status === 'fechado' ? numero(f.valor_fechado) : null,
-    // só envia o tipo quando há o que gravar ou limpar (assim o resto do cadastro não depende da migração 007)
-    ...(f.status === 'fechado' || leadOriginal?.fechado_tipo != null
-      ? { fechado_tipo: f.status === 'fechado' ? (f.fechado_tipo === 'aluguel' ? 'aluguel' : 'venda') : null }
-      : {}),
+    ...colunasDaEtapa(f.status, f),
+    responsavel_id: f.responsavel_id || null,
     consentimento_lgpd: f.consentimento_lgpd,
     consentimento_em: f.consentimento_lgpd ? (leadOriginal?.consentimento_em ?? new Date().toISOString()) : null,
 
@@ -101,8 +100,12 @@ export function payloadDoLead(f, leadOriginal = null) {
   }
 }
 
-export function validarLead(f) {
+export function validarLead(f, leadOriginal = null) {
   if (!texto(f.nome)) return { aba: 'dados', mensagem: 'Informe o nome do lead.' }
+  if (entrandoNaEtapa(leadOriginal, f.status)) {
+    const problema = validarEtapa(f.status, f)
+    if (problema) return { aba: 'dados', mensagem: problema }
+  }
   const min = numero(f.busca_valor_min)
   const max = numero(f.busca_valor_max)
   if (min !== null && max !== null && min > max) {
@@ -228,7 +231,7 @@ export function montarMensagem(modelo, { lead, imovel = null, corretor = '', vis
   const saudacao = nome ? `Olá, ${nome}!` : 'Olá!'
   const assinatura = corretor ? `Aqui é ${corretor}, corretor de imóveis.` : ''
   const abertura = [saudacao, assinatura].filter(Boolean).join(' ')
-  const nome_imovel = imovel?.titulo ? `imóvel "${imovel.titulo}"` : null
+  const nome_imovel = imovel?.titulo ? `imóvel "${imovel.titulo}"${imovel.codigo ? ` (${imovel.codigo})` : ''}` : null
   const casa = nome_imovel && `o ${nome_imovel}` // "o imóvel ..."
   const noImovel = nome_imovel && `no ${nome_imovel}` // "no imóvel ..."
   const aoImovel = nome_imovel && `ao ${nome_imovel}` // "ao imóvel ..."

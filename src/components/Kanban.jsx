@@ -1,6 +1,8 @@
 import { Suspense, useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { supabase, ETAPAS } from '../lib/supabase.js'
-import { LeadModal } from '../componentesPreguicosos.js'
+import { LeadModal, EtapaModal } from '../componentesPreguicosos.js'
+import { colunasDaEtapa, textoDoMotivo } from '../lib/etapa.js'
+import { useResponsaveis } from '../lib/responsaveis.js'
 import Topo from './Topo.jsx'
 import { linkWhatsapp } from '../lib/format.js'
 import { rotuloOrigem, quandoCurto, faixaDoDia } from '../lib/lead.js'
@@ -29,6 +31,9 @@ export default function Kanban({ usuario, pagina, onPagina }) {
   const [arrastando, setArrastando] = useState(null)
   const [colunaAlvo, setColunaAlvo] = useState(null)
   const [aberto, setAberto] = useState(null) // null | { lead, aba }
+  const [etapaPendente, setEtapaPendente] = useState(null) // { lead, status }: pede motivo (Perdido) ou dados do fechamento
+  const [escopo, setEscopo] = useState('meus') // meus | todos (leads de outros que o usuário pode ver)
+  const { nomeDe } = useResponsaveis()
   const [proximos, setProximos] = useState({}) // { leadId: { visita, lembrete } }
   const { recarregar: recarregarAvisos } = useAvisos() // lembretes/visitas criados na janela do lead atualizam o selo da Agenda
 
@@ -57,7 +62,10 @@ export default function Kanban({ usuario, pagina, onPagina }) {
 
   // digitar na busca não trava no celular: a lista filtra logo depois, sem segurar o teclado
   const buscaAdiada = useDeferredValue(busca)
-  const filtrados = useMemo(() => filtrarLeads(leads, { busca: buscaAdiada }), [leads, buscaAdiada])
+  const meu = (l) => (l.responsavel_id ?? l.owner_id) === usuario.id
+  const temDeOutros = useMemo(() => leads.some((l) => (l.responsavel_id ?? l.owner_id) !== usuario.id), [leads, usuario.id])
+  const visiveis = useMemo(() => (escopo === 'todos' ? leads : leads.filter((l) => (l.responsavel_id ?? l.owner_id) === usuario.id)), [leads, escopo, usuario.id])
+  const filtrados = useMemo(() => filtrarLeads(visiveis, { busca: buscaAdiada }), [visiveis, buscaAdiada])
 
   function mudarVisao(nova) {
     setVisao(nova)
@@ -74,16 +82,25 @@ export default function Kanban({ usuario, pagina, onPagina }) {
     return mapa
   }, [filtrados])
 
-  async function mover(lead, novoStatus) {
-    if (lead.status === novoStatus) return
+  async function gravarEtapa(lead, novoStatus, formEtapa = {}) {
+    const colunas = { status: novoStatus, ...colunasDaEtapa(novoStatus, formEtapa) }
     const anterior = leads
     // atualização otimista; desfaz se o banco recusar
-    setLeads((ls) => ls.map((l) => (l.id === lead.id ? { ...l, status: novoStatus } : l)))
-    const { error } = await supabase.from('leads').update({ status: novoStatus }).eq('id', lead.id)
+    setLeads((ls) => ls.map((l) => (l.id === lead.id ? { ...l, ...colunas } : l)))
+    const { error } = await supabase.from('leads').update(colunas).eq('id', lead.id)
     if (error) {
       setLeads(anterior)
-      setErro('Não foi possível mover o lead: ' + error.message)
+      return error.message
     }
+    return null
+  }
+
+  async function mover(lead, novoStatus) {
+    if (lead.status === novoStatus) return
+    // Perdido e Fechado pedem dados obrigatórios antes de mover
+    if (novoStatus === 'perdido' || novoStatus === 'fechado') return setEtapaPendente({ lead, status: novoStatus })
+    const falha = await gravarEtapa(lead, novoStatus)
+    if (falha) setErro('Não foi possível mover o lead: ' + falha)
   }
 
   function aoSoltar(e, etapaId) {
@@ -105,6 +122,16 @@ export default function Kanban({ usuario, pagina, onPagina }) {
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
         />
+        {temDeOutros && (
+          <div className="visoes" role="group" aria-label="Quais leads mostrar">
+            <button type="button" className={escopo === 'meus' ? 'ativo' : ''} aria-pressed={escopo === 'meus'} onClick={() => setEscopo('meus')}>
+              Meus leads
+            </button>
+            <button type="button" className={escopo === 'todos' ? 'ativo' : ''} aria-pressed={escopo === 'todos'} onClick={() => setEscopo('todos')}>
+              Todos
+            </button>
+          </div>
+        )}
         <div className="visoes" role="group" aria-label="Forma de exibição">
           <button type="button" className={visao === 'quadro' ? 'ativo' : ''} aria-pressed={visao === 'quadro'} onClick={() => mudarVisao('quadro')}>
             Quadro
@@ -122,7 +149,7 @@ export default function Kanban({ usuario, pagina, onPagina }) {
       {carregando ? (
         <div className="centro">Carregando leads…</div>
       ) : visao === 'lista' ? (
-        <LeadLista leads={leads} busca={buscaAdiada} onAbrir={(lead) => setAberto({ lead, aba: 'dados' })} />
+        <LeadLista leads={visiveis} busca={buscaAdiada} onAbrir={(lead) => setAberto({ lead, aba: 'dados' })} />
       ) : (
         <main className="quadro">
           {ETAPAS.map((etapa) => {
@@ -156,6 +183,8 @@ export default function Kanban({ usuario, pagina, onPagina }) {
                     >
                       <strong>{lead.nome}</strong>
                       {lead.telefone && <span>{lead.telefone}</span>}
+                      {lead.status === 'perdido' && lead.perdido_motivo && <span className="motivo-perda">{textoDoMotivo(lead)}</span>}
+                      {!meu(lead) && <span className="responsavel-card">Responsável: {nomeDe(lead.responsavel_id ?? lead.owner_id) || '—'}</span>}
                       <Selos proximo={proximos[lead.id]} />
                       <select
                         className="mover-etapa"
@@ -213,6 +242,21 @@ export default function Kanban({ usuario, pagina, onPagina }) {
             recarregarAvisos()
             // lead recém-criado continua aberto, para vincular imóvel e agendar
             setAberto(criado ? { lead: criado, aba: 'imoveis' } : null)
+          }}
+        />
+      )}
+      {etapaPendente && (
+        <EtapaModal
+          lead={etapaPendente.lead}
+          status={etapaPendente.status}
+          onCancelar={() => setEtapaPendente(null)}
+          onConfirmar={async (formEtapa) => {
+            const falha = await gravarEtapa(etapaPendente.lead, etapaPendente.status, formEtapa)
+            if (!falha) {
+              setEtapaPendente(null)
+              recarregarAvisos()
+            }
+            return falha
           }}
         />
       )}

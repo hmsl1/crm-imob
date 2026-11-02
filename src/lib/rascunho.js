@@ -21,7 +21,7 @@ function armazenamento() {
 export function temConteudo(form, fotos = []) {
   if (fotos.length > 0) return true
   const vazio = formDoImovel(null)
-  return Object.keys(vazio).some((k) => k !== 'corretor_id' && JSON.stringify(form[k]) !== JSON.stringify(vazio[k]))
+  return Object.keys(vazio).some((k) => k !== 'captador_id' && JSON.stringify(form[k]) !== JSON.stringify(vazio[k]))
 }
 
 export function salvarRascunho(usuarioId, { form, fotos, novas, aba }, { storage = armazenamento(), agora = Date.now() } = {}) {

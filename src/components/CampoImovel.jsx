@@ -204,7 +204,7 @@ function CorpoEditor({ campo, rascunho, definir, corretores }) {
     case 'corretor':
       return (
         <select autoFocus aria-label={rotulo} value={valor} onChange={aoMudar}>
-          <option value="">Sem corretor</option>
+          <option value="">Sem captador</option>
           {corretores.map((c) => (
             <option key={c.id} value={c.id}>
               {c.nome}

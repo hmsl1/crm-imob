@@ -5,6 +5,7 @@ import { STATUS_VISITA, montarMensagem, quandoCurto } from '../lib/lead.js'
 import { abrirWhatsapp } from '../lib/whatsapp.js'
 import { useNomeDoCorretor } from '../lib/corretor.js'
 import { useAvisos } from '../lib/avisosContexto.js'
+import { comCodigo } from '../lib/imovel.js'
 import Topo from './Topo.jsx'
 import { LeadModal } from '../componentesPreguicosos.js'
 
@@ -22,15 +23,15 @@ export default function Agenda({ usuario, pagina, onPagina }) {
 
   const carregar = useCallback(async () => {
     const [v, l] = await Promise.all([
-      supabase.from('visitas').select('*, leads(id, nome, telefone), imoveis(id, titulo)').eq('status', 'agendada').order('quando'),
-      supabase.from('lembretes').select('*, leads(id, nome, telefone)').eq('concluido', false).order('quando'),
+      supabase.from('visitas').select('*, leads!inner(id, nome, telefone), imoveis(id, titulo, codigo)').eq('leads.responsavel_id', usuario.id).eq('status', 'agendada').order('quando'),
+      supabase.from('lembretes').select('*, leads!inner(id, nome, telefone)').eq('leads.responsavel_id', usuario.id).eq('concluido', false).order('quando'),
     ])
     const falha = v.error ?? l.error
     setErro(falha ? falha.message : '')
     setVisitas(v.data ?? [])
     setLembretes(l.data ?? [])
     setCarregando(false)
-  }, [])
+  }, [usuario.id])
 
   useEffect(() => {
     carregar()
@@ -93,7 +94,7 @@ export default function Agenda({ usuario, pagina, onPagina }) {
                     </button>
                     <span className="suave">
                       {quandoCurto(item.quando)}
-                      {item.imovel ? ` · ${item.imovel.titulo}` : ''}
+                      {item.imovel ? ` · ${comCodigo(item.imovel)}` : ''}
                       {item.nota ? ` · ${item.nota}` : ''}
                     </span>
                   </div>

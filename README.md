@@ -1,4 +1,4 @@
-# CRM Corretor
+# CRM do Corretor
 
 CRM para corretor individual: funil kanban de leads, histórico de interações e captura de origem (base para a integração com tráfego pago).
 
@@ -7,9 +7,7 @@ CRM para corretor individual: funil kanban de leads, histórico de interações 
 ## Como rodar
 
 1. Crie um projeto grátis em [supabase.com](https://supabase.com).
-2. No **SQL Editor**, execute os arquivos nesta ordem (cada um numa execução separada):
-   1. `supabase/schema.sql`
-   2. `supabase/migrations/002_imoveis_fotos.sql`
+2. No **SQL Editor**, cole e execute o arquivo `supabase/schema.sql` inteiro, uma vez. Ele cria tudo (leads, imóveis com fotos e captador, agenda, metas e funil do Dashboard).
 3. Em **Project Settings → API**, copie a URL e a chave `anon`.
 4. Neste projeto:
 

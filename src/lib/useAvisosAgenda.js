@@ -14,15 +14,15 @@ export function useAvisosAgenda(usuarioId) {
 
   const recarregar = useCallback(async () => {
     const [v, l] = await Promise.all([
-      supabase.from('visitas').select('*, leads(id, nome, telefone), imoveis(id, titulo)').eq('status', 'agendada').order('quando'),
-      supabase.from('lembretes').select('*, leads(id, nome, telefone)').eq('concluido', false).order('quando'),
+      supabase.from('visitas').select('*, leads!inner(id, nome, telefone), imoveis(id, titulo, codigo)').eq('leads.responsavel_id', usuarioId).eq('status', 'agendada').order('quando'),
+      supabase.from('lembretes').select('*, leads!inner(id, nome, telefone)').eq('leads.responsavel_id', usuarioId).eq('concluido', false).order('quando'),
     ])
     // se a migração 004 ainda não rodou, simplesmente não há avisos
     setVisitas(v.error ? [] : (v.data ?? []))
     setLembretes(l.error ? [] : (l.data ?? []))
     setAgora(new Date())
     setCarregado(true)
-  }, [])
+  }, [usuarioId])
 
   useEffect(() => {
     recarregar()

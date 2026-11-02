@@ -10,6 +10,9 @@ export const TIPOS_IMOVEL = [
   { id: 'outro', rotulo: 'Outro' },
 ]
 
+// "CRZ-0001 · Casa no Centro": o código ajuda a achar o imóvel numa lista ou numa conversa
+export const comCodigo = (i) => (i?.codigo ? `${i.codigo} · ${i.titulo}` : (i?.titulo ?? ''))
+
 export const FINALIDADES = [
   { id: 'venda', rotulo: 'Venda' },
   { id: 'aluguel', rotulo: 'Aluguel' },
@@ -162,7 +165,7 @@ export const FORM_VAZIO = {
   tipo: 'apartamento',
   finalidade: 'venda',
   status: 'disponivel',
-  corretor_id: '',
+  captador_id: '',
   endereco: '',
   bairro: '',
   cidade: '',
@@ -231,7 +234,7 @@ export function payloadDoForm(f) {
     tipo: f.tipo,
     finalidade: f.finalidade,
     status: f.status,
-    corretor_id: f.corretor_id || null,
+    captador_id: f.captador_id || null,
     endereco: texto(f.endereco),
     bairro: texto(f.bairro),
     cidade: texto(f.cidade),

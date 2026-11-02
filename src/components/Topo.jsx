@@ -8,6 +8,7 @@ import { resumoDosAvisos } from '../lib/avisos.js'
 import { IconeSino } from './AvisoHoje.jsx'
 
 const PAGINAS = [
+  { id: 'dashboard', rotulo: 'Dashboard' },
   { id: 'leads', rotulo: 'Leads' },
   { id: 'imoveis', rotulo: 'Imóveis' },
   { id: 'agenda', rotulo: 'Agenda' },

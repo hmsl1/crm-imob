@@ -11,13 +11,12 @@ const rotulo = (lista, id) => lista.find((i) => i.id === id)?.rotulo ?? id
 
 // Visualização do imóvel em abas (as mesmas do formulário). Cada campo tem um lápis para editar
 // só aquele campo; o botão "Editar" abre o formulário completo.
-export default function ImovelDetalhes({ imovel, corretores, existentes = [], somenteLeitura = false, aba, onAba, onFechar, onEditar, onAtualizado }) {
+export default function ImovelDetalhes({ imovel, corretores, corretor = '', existentes = [], somenteLeitura = false, aba, onAba, onFechar, onEditar, onAtualizado }) {
   const { saindo, fechar } = useFechamentoAnimado()
   const [atual, setAtual] = useState(0) // foto exibida na galeria
   const [editando, setEditando] = useState(null) // id do campo em edição
   const [trocouAba, setTrocouAba] = useState(false) // liga o fade entre abas depois da primeira troca
   const [compartilhando, setCompartilhando] = useState(false)
-  const corretorNome = corretores?.find((c) => c.id === imovel.corretor_id)?.nome ?? ''
   const fotos = imovel.fotos ?? []
   const total = fotos.length
   const precos = precosDoImovel(imovel)
@@ -90,6 +89,7 @@ export default function ImovelDetalhes({ imovel, corretores, existentes = [], so
             )}
             <div>
               <h2>{imovel.titulo}</h2>
+              {imovel.codigo && <div className="codigo-imovel">{imovel.codigo}</div>}
               <div className="subtitulo">
                 {local} <BotaoMapa imovel={imovel} />
               </div>
@@ -203,7 +203,7 @@ export default function ImovelDetalhes({ imovel, corretores, existentes = [], so
         ))}
       </div>
     </div>
-    {compartilhando && <CompartilharFicha imovel={imovel} corretor={corretorNome} onFechar={() => setCompartilhando(false)} />}
+    {compartilhando && <CompartilharFicha imovel={imovel} corretor={corretor} onFechar={() => setCompartilhando(false)} />}
     </>
   )
 }

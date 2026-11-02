@@ -4,8 +4,6 @@ import { TIPOS_IMOVEL } from '../lib/imovel.js'
 import {
   BUSCA_FINALIDADES,
   ORIGENS,
-  TIPOS_FECHAMENTO,
-  rotuloValorFechado,
   formDoLead,
   payloadDoLead,
   resumoDoPerfil,
@@ -16,7 +14,10 @@ import { useDadosDoLead } from '../lib/useDadosDoLead.js'
 import { acharLeadsDuplicados, contatoMudou } from '../lib/duplicados.js'
 import AvisoDuplicado from './AvisoDuplicado.jsx'
 import { useNomeDoCorretor } from '../lib/corretor.js'
+import { aoEscolherEtapa } from '../lib/etapa.js'
+import { useResponsaveis } from '../lib/responsaveis.js'
 import Opcoes from './Opcoes.jsx'
+import CamposEtapa from './CamposEtapa.jsx'
 import LeadImoveis from './LeadImoveis.jsx'
 import LeadContato from './LeadContato.jsx'
 import CompartilharFicha from './CompartilharFicha.jsx'
@@ -37,7 +38,10 @@ export default function LeadModal({ lead, usuario, abaInicial = 'dados', onFecha
   const editando = Boolean(lead)
   const [aba, setAba] = useState(abaInicial)
   const [trocouAba, setTrocouAba] = useState(false) // liga o fade entre abas depois da primeira troca
-  const [form, setForm] = useState(() => formDoLead(lead))
+  const [form, setForm] = useState(() => {
+    const inicial = formDoLead(lead)
+    return { ...inicial, responsavel_id: inicial.responsavel_id || usuario.id } // lead novo: o responsável é quem está criando
+  })
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
   const [compartilhando, setCompartilhando] = useState(null) // imóvel
@@ -46,6 +50,7 @@ export default function LeadModal({ lead, usuario, abaInicial = 'dados', onFecha
 
   const dados = useDadosDoLead(lead?.id)
   const { nome: corretor } = useNomeDoCorretor(usuario)
+  const { responsaveis } = useResponsaveis()
 
   const campo = (nome) => (e) => {
     if (nome === 'telefone' || nome === 'email') setDuplicados(null) // o contato mudou: o aviso não vale mais
@@ -64,7 +69,7 @@ export default function LeadModal({ lead, usuario, abaInicial = 'dados', onFecha
   async function salvar(e, ignorarDuplicados = false) {
     e?.preventDefault()
     setErro('')
-    const problema = validarLead(form)
+    const problema = validarLead(form, lead)
     if (problema) {
       setAba(problema.aba)
       return setErro(problema.mensagem)
@@ -165,7 +170,7 @@ export default function LeadModal({ lead, usuario, abaInicial = 'dados', onFecha
                 <div className="duas">
                   <label>
                     Etapa
-                    <select value={form.status} onChange={campo('status')}>
+                    <select value={form.status} onChange={(e) => setForm((f) => aoEscolherEtapa(f, e.target.value))}>
                       <Opcoes lista={ETAPAS_OPCOES} />
                     </select>
                   </label>
@@ -177,20 +182,30 @@ export default function LeadModal({ lead, usuario, abaInicial = 'dados', onFecha
                   </label>
                 </div>
 
-                {form.status === 'fechado' && (
-                  <div className="duas">
-                    <label>
-                      Tipo de negócio
-                      <select value={form.fechado_tipo} onChange={campo('fechado_tipo')}>
-                        <Opcoes lista={TIPOS_FECHAMENTO} />
-                      </select>
-                    </label>
-                    <label>
-                      {rotuloValorFechado(form.fechado_tipo)}
-                      <input type="number" inputMode="decimal" min="0" step="0.01" value={form.valor_fechado} onChange={campo('valor_fechado')} />
-                    </label>
-                  </div>
-                )}
+                <CamposEtapa
+                  status={form.status}
+                  form={form}
+                  onMudar={(nome, valor) => setForm((f) => ({ ...f, [nome]: valor }))}
+                  vinculados={dados.vinculos.map((v) => v.id)}
+                />
+
+                <label>
+                  Responsável
+                  <select value={form.responsavel_id} onChange={campo('responsavel_id')}>
+                    {!responsaveis.some((r) => r.id === form.responsavel_id) && (
+                      <option value={form.responsavel_id}>{form.responsavel_id === usuario.id ? corretor : 'Responsável atual'}</option>
+                    )}
+                    {responsaveis.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.nome}
+                        {r.id === usuario.id ? ' (você)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {editando && form.responsavel_id !== (lead.responsavel_id ?? usuario.id) && (
+                    <span className="ajuda-meta">Ao salvar, o lead é transferido e a troca fica registrada no histórico.</span>
+                  )}
+                </label>
 
                 <label>
                   Observações

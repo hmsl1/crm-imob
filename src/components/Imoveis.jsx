@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase.js'
 import { TIPOS_IMOVEL, STATUS_IMOVEL, FINALIDADES, atendeFinalidade } from '../lib/imovel.js'
 import { precosDoImovel } from '../lib/format.js'
 import { bairrosDosImoveis, atendeBairro } from '../lib/bairros.js'
+import { useNomeDoCorretor } from '../lib/corretor.js'
 import Topo from './Topo.jsx'
 import { ImovelModal, ImovelDetalhes } from '../componentesPreguicosos.js'
 
@@ -12,6 +13,7 @@ const rotulo = (lista, id) => lista.find((i) => i.id === id)?.rotulo ?? id
 const FINALIDADES_FILTRO = FINALIDADES.filter((f) => f.id !== 'venda_aluguel')
 
 export default function Imoveis({ usuario, pagina, onPagina }) {
+  const { nome: nomeCorretor } = useNomeDoCorretor(usuario)
   const [imoveis, setImoveis] = useState([])
   const [corretores, setCorretores] = useState([])
   const [carregando, setCarregando] = useState(true)
@@ -66,7 +68,7 @@ export default function Imoveis({ usuario, pagina, onPagina }) {
       if (status && i.status !== status) return false
       if (!atendeFinalidade(i.finalidade, finalidade)) return false
       if (!termo) return true
-      return [i.titulo, i.bairro, i.cidade, i.proprietario_nome].some(
+      return [i.titulo, i.codigo, i.bairro, i.cidade, i.proprietario_nome].some(
         (v) => v && v.toLowerCase().includes(termo)
       )
     })
@@ -187,6 +189,7 @@ export default function Imoveis({ usuario, pagina, onPagina }) {
                       </span>
                     ))
                   )}
+                  {i.codigo && <span className="codigo-imovel">{i.codigo}</span>}
                   <strong>{i.titulo}</strong>
                   <span className="detalhes">
                     {[rotulo(TIPOS_IMOVEL, i.tipo), i.bairro, i.cidade].filter(Boolean).join(' · ')}
@@ -212,6 +215,7 @@ export default function Imoveis({ usuario, pagina, onPagina }) {
         <ImovelDetalhes
           imovel={imovelAberto}
           corretores={corretores}
+          corretor={nomeCorretor}
           somenteLeitura={Boolean(imovelAberto.owner_id) && imovelAberto.owner_id !== usuario.id}
           existentes={imoveis}
           aba={abaDetalhe}
