@@ -4,10 +4,15 @@ import { temVenda, temAluguel } from './imovel.js'
 
 // Assume Brasil (+55) quando o número vem sem código do país
 // "texto" (opcional) já abre a conversa com a mensagem preenchida
-export function linkWhatsapp(telefone, texto) {
-  let numeros = String(telefone).replace(/\D/g, '').replace(/^0+/, '')
+// Só os dígitos, com o 55 do Brasil garantido na frente (quem já manda o país não é mexido)
+export function digitosWhatsapp(telefone) {
+  let numeros = String(telefone ?? '').replace(/\D/g, '').replace(/^0+/, '')
   if (numeros.length <= 11) numeros = '55' + numeros
-  return `https://wa.me/${numeros}` + (texto ? `?text=${encodeURIComponent(texto)}` : '')
+  return numeros
+}
+
+export function linkWhatsapp(telefone, texto) {
+  return `https://wa.me/${digitosWhatsapp(telefone)}` + (texto ? `?text=${encodeURIComponent(texto)}` : '')
 }
 
 // Sem destinatário: o WhatsApp pede para escolher o contato

@@ -4,6 +4,7 @@ import { FINALIDADES, PERIODOS_IPTU, temVenda, temAluguel } from '../lib/imovel.
 import { exibirCampo, marcadosDoGrupo, rascunhoInicial, calcularAtualizacao } from '../lib/imovelCampos.js'
 import { linkWhatsapp } from '../lib/format.js'
 import { linkMapa, enderecoExato } from '../lib/mapa.js'
+import { situacaoExclusividade } from '../lib/exclusividade.js'
 import { acharImoveisNoMesmoEndereco, enderecoMudou } from '../lib/duplicados.js'
 import Opcoes from './Opcoes.jsx'
 import AvisoDuplicado from './AvisoDuplicado.jsx'
@@ -71,11 +72,23 @@ export default function CampoImovel({ campo, imovel, corretores, existentes = []
               </a>
             )}
             {campo.mapa && <BotaoMapa imovel={imovel} />}
+            {campo.tipo === 'exclusividade' && <AlertaExclusividade imovel={imovel} />}
             {lapis}
           </>
         )}
       </dd>
     </div>
+  )
+}
+
+// "Vence em 12 dias" / "Venceu há 3 dias": aparece ao lado da exclusividade só quando pede atenção
+export function AlertaExclusividade({ imovel }) {
+  const s = situacaoExclusividade(imovel)
+  if (s.estado !== 'vence' && s.estado !== 'vencida') return null
+  return (
+    <span className={'alerta-exclusividade ' + s.estado} role="status">
+      {s.estado === 'vencida' ? 'Vencida' : s.dias === 0 ? 'Vence hoje' : `Vence em ${s.dias} ${s.dias === 1 ? 'dia' : 'dias'}`}
+    </span>
   )
 }
 
@@ -211,6 +224,27 @@ function CorpoEditor({ campo, rascunho, definir, corretores }) {
             </option>
           ))}
         </select>
+      )
+    case 'data':
+      return <input autoFocus type="date" aria-label={rotulo} value={valor} onChange={aoMudar} />
+    case 'exclusividade':
+      return (
+        <>
+          <label>
+            Exclusividade
+            <select autoFocus value={rascunho.exclusividade} onChange={(e) => definir('exclusividade', e.target.value)}>
+              <option value="">Não informado</option>
+              <option value="sim">Sim</option>
+              <option value="nao">Não</option>
+            </select>
+          </label>
+          {rascunho.exclusividade === 'sim' && (
+            <label>
+              Exclusividade vence em
+              <input type="date" value={rascunho.exclusividade_ate} onChange={(e) => definir('exclusividade_ate', e.target.value)} />
+            </label>
+          )}
+        </>
       )
     case 'finalidade':
       return (

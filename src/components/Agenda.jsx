@@ -5,6 +5,7 @@ import { STATUS_VISITA, montarMensagem, quandoCurto } from '../lib/lead.js'
 import { abrirWhatsapp } from '../lib/whatsapp.js'
 import { useNomeDoCorretor } from '../lib/corretor.js'
 import { useAvisos } from '../lib/avisosContexto.js'
+import { linkWhatsapp } from '../lib/format.js'
 import { comCodigo } from '../lib/imovel.js'
 import Topo from './Topo.jsx'
 import { LeadModal } from '../componentesPreguicosos.js'
@@ -19,7 +20,8 @@ export default function Agenda({ usuario, pagina, onPagina }) {
   const [erro, setErro] = useState('')
   const [aberto, setAberto] = useState(null) // { lead, aba }
   const { nome: corretor } = useNomeDoCorretor(usuario)
-  const { recarregar: recarregarAvisos } = useAvisos()
+  const { avisos, recarregar: recarregarAvisos } = useAvisos()
+  const exclusividades = avisos.exclusividades ?? []
 
   const carregar = useCallback(async () => {
     const [v, l] = await Promise.all([
@@ -70,10 +72,46 @@ export default function Agenda({ usuario, pagina, onPagina }) {
       <main className="agenda">
         {erro && <p className="erro faixa">{erro}</p>}
         {carregando && <div className="centro">Carregando agenda…</div>}
-        {!carregando && faixas.length === 0 && (
+        {!carregando && faixas.length === 0 && exclusividades.length === 0 && (
           <div className="vazio-grande">
             <p>Nada pendente. Crie lembretes de retorno e agende visitas dentro de cada lead.</p>
           </div>
+        )}
+        {exclusividades.length > 0 && (
+          <section className="faixa-agenda exclusividades" aria-label="Exclusividades vencendo">
+            <h2>
+              Exclusividades <span className="contagem">{exclusividades.length}</span>
+            </h2>
+            <ul className="itens">
+              {exclusividades.map((a) => (
+                <li key={a.imovel.id}>
+                  <div className="item-info">
+                    <span className={'tipo-agenda exclusividade ' + a.estado}>{a.estado === 'vencida' ? 'Vencida' : 'Vencendo'}</span>
+                    <strong className="nome-lead">{comCodigo(a.imovel)}</strong>
+                    <span className="suave">{a.texto}</span>
+                  </div>
+                  <div className="item-acoes">
+                    {a.imovel.proprietario_telefone1 && (
+                      <a
+                        className="btn-whatsapp"
+                        href={linkWhatsapp(
+                          a.imovel.proprietario_telefone1,
+                          `Olá${a.imovel.proprietario_nome ? ', ' + a.imovel.proprietario_nome : ''}! Aqui é ${corretor}. Sobre a exclusividade do seu imóvel (${comCodigo(a.imovel)}): vamos conversar sobre a renovação?`
+                        )}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        WhatsApp do proprietário
+                      </a>
+                    )}
+                    <button type="button" className="pequeno" onClick={() => onPagina('imoveis')}>
+                      Ver imóveis
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
         {faixas.map((faixa) => (
           <section key={faixa.id} className={'faixa-agenda ' + faixa.id}>

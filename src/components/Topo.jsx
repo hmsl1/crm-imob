@@ -6,11 +6,13 @@ import { useNomeDoCorretor } from '../lib/corretor.js'
 import { useAvisos } from '../lib/avisosContexto.js'
 import { resumoDosAvisos } from '../lib/avisos.js'
 import { IconeSino } from './AvisoHoje.jsx'
+import { linkVitrine } from '../lib/rota.js'
 
 const PAGINAS = [
   { id: 'dashboard', rotulo: 'Dashboard' },
   { id: 'leads', rotulo: 'Leads' },
   { id: 'imoveis', rotulo: 'Imóveis' },
+  { id: 'proprietarios', rotulo: 'Proprietários' },
   { id: 'agenda', rotulo: 'Agenda' },
 ]
 
@@ -54,6 +56,9 @@ export default function Topo({ usuario, pagina, onPagina, children }) {
       >
         {nome}
       </button>
+      <a className="link" href={linkVitrine} target="_blank" rel="noreferrer">
+        Ver site
+      </a>
       <button className="link" onClick={() => supabase.auth.signOut()}>
         Sair
       </button>

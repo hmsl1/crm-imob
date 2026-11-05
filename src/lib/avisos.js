@@ -7,7 +7,8 @@ import { diasAte } from './lead.js'
 export const DIAS_PROXIMOS = 2
 
 // Separa os itens pendentes (visitas agendadas e retornos não concluídos) em atrasados, hoje e próximos
-export function avisosDaAgenda(visitas = [], lembretes = [], agora = new Date(), dias = DIAS_PROXIMOS) {
+// `exclusividades`: alertas de exclusividade vencendo/vencida (ver exclusividade.js); entram no total do selo
+export function avisosDaAgenda(visitas = [], lembretes = [], agora = new Date(), dias = DIAS_PROXIMOS, exclusividades = []) {
   const itens = itensDaAgenda(visitas, lembretes)
   const faltam = (i) => diasAte(i.quando, agora)
   const atrasados = itens.filter((i) => faltam(i) < 0)
@@ -17,8 +18,9 @@ export function avisosDaAgenda(visitas = [], lembretes = [], agora = new Date(),
     atrasados,
     hoje,
     proximos,
-    total: atrasados.length + hoje.length + proximos.length,
-    urgente: atrasados.length + hoje.length > 0, // vira vermelho no menu
+    exclusividades,
+    total: atrasados.length + hoje.length + proximos.length + exclusividades.length,
+    urgente: atrasados.length + hoje.length > 0 || exclusividades.some((e) => e.estado === 'vencida'), // vira vermelho no menu
   }
 }
 
@@ -28,8 +30,12 @@ export function resumoDosAvisos(a, dias = DIAS_PROXIMOS) {
   if (a.atrasados.length) partes.push(`${a.atrasados.length} ${a.atrasados.length === 1 ? 'atrasado' : 'atrasados'}`)
   if (a.hoje.length) partes.push(`${a.hoje.length} hoje`)
   if (a.proximos.length) partes.push(`${a.proximos.length} nos próximos ${dias} dias`)
-  if (!partes.length) return 'Nada pendente para os próximos dias'
-  return `${a.total} ${a.total === 1 ? 'compromisso' : 'compromissos'}: ${partes.join(', ')}`
+  const compromissos = a.atrasados.length + a.hoje.length + a.proximos.length
+  const excl = a.exclusividades?.length ?? 0
+  const textoExcl = excl ? `${excl} ${excl === 1 ? 'exclusividade' : 'exclusividades'} vencendo` : ''
+  if (!partes.length) return textoExcl || 'Nada pendente para os próximos dias'
+  const base = `${compromissos} ${compromissos === 1 ? 'compromisso' : 'compromissos'}: ${partes.join(', ')}`
+  return textoExcl ? `${base}; ${textoExcl}` : base
 }
 
 // ---------------------------------------------------------------

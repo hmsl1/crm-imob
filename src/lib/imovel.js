@@ -1,5 +1,6 @@
 // Regras e opções do cadastro de imóvel. Funções puras: não dependem do Supabase nem do React,
 // por isso são fáceis de testar.
+import { hojeISO } from './datas.js'
 
 export const TIPOS_IMOVEL = [
   { id: 'apartamento', rotulo: 'Apartamento' },
@@ -10,7 +11,7 @@ export const TIPOS_IMOVEL = [
   { id: 'outro', rotulo: 'Outro' },
 ]
 
-// "CRZ-0001 · Casa no Centro": o código ajuda a achar o imóvel numa lista ou numa conversa
+// "CA0001 · Casa no Centro": o código ajuda a achar o imóvel numa lista ou numa conversa
 export const comCodigo = (i) => (i?.codigo ? `${i.codigo} · ${i.titulo}` : (i?.titulo ?? ''))
 
 export const FINALIDADES = [
@@ -157,6 +158,7 @@ export function atendeFinalidade(finalidadeDoImovel, filtro) {
 const CAMPOS_SIMNAO = ['exclusividade', 'aceita_financiamento', 'vista_mar']
 
 export const FORM_VAZIO = {
+  proprietario_id: '', // proprietário já cadastrado (vazio = novo ou digitado à mão)
   proprietario_nome: '',
   proprietario_telefone1: '',
   proprietario_telefone2: '',
@@ -166,6 +168,7 @@ export const FORM_VAZIO = {
   finalidade: 'venda',
   status: 'disponivel',
   captador_id: '',
+  captado_em: '', // vazio = hoje
   endereco: '',
   bairro: '',
   cidade: '',
@@ -179,7 +182,9 @@ export const FORM_VAZIO = {
   padrao: '',
   aceita_financiamento: '',
   exclusividade: '',
+  exclusividade_ate: '',
   chave_com_proprietario: false,
+  publicar_no_site: true,
 
   estado_imovel: '',
   posicao: '',
@@ -226,6 +231,7 @@ export function tituloAutomatico(form) {
 // Converte o formulário no objeto gravado no banco (sem as fotos, que o modal acrescenta)
 export function payloadDoForm(f) {
   return {
+    proprietario_id: f.proprietario_id || null,
     proprietario_nome: texto(f.proprietario_nome),
     proprietario_telefone1: texto(f.proprietario_telefone1),
     proprietario_telefone2: texto(f.proprietario_telefone2),
@@ -235,6 +241,7 @@ export function payloadDoForm(f) {
     finalidade: f.finalidade,
     status: f.status,
     captador_id: f.captador_id || null,
+    captado_em: texto(f.captado_em) ?? hojeISO(),
     endereco: texto(f.endereco),
     bairro: texto(f.bairro),
     cidade: texto(f.cidade),
@@ -249,7 +256,9 @@ export function payloadDoForm(f) {
     padrao: f.padrao || null,
     aceita_financiamento: simNao(f.aceita_financiamento),
     exclusividade: simNao(f.exclusividade),
+    exclusividade_ate: simNao(f.exclusividade) === true ? texto(f.exclusividade_ate) : null, // sem exclusividade, sem vencimento
     chave_com_proprietario: f.chave_com_proprietario,
+    publicar_no_site: f.publicar_no_site,
 
     estado_imovel: f.estado_imovel || null,
     posicao: f.posicao || null,
@@ -270,6 +279,7 @@ export function payloadDoForm(f) {
     caracteristicas: f.caracteristicas,
     pisos: f.pisos,
     comentarios: texto(f.comentarios),
+    a_completar: false, // salvo pelo formulário completo (já validado): deixa de ser captação rápida a completar
   }
 }
 

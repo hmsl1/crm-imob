@@ -9,10 +9,17 @@ export function enderecoParaMapa(imovel) {
 }
 
 // Com rua e número o mapa marca o ponto; só com bairro/cidade ele mostra a região
-export const enderecoExato = (imovel) => limpo(imovel?.endereco) !== ''
+export const enderecoExato = (imovel) => limpo(imovel?.endereco) !== '' || temCoordenadas(imovel)
 
-// Link que abre o Google Maps (app ou site) já pesquisando o endereço, ou null se não há dados
+export const temCoordenadas = (imovel) =>
+  imovel?.latitude != null && imovel?.longitude != null && imovel.latitude !== '' && imovel.longitude !== ''
+
+// Link que abre o Google Maps (app ou site): no ponto exato quando há coordenadas (captação pelo GPS),
+// senão pesquisando o endereço. null se não há dados
 export function linkMapa(imovel) {
+  if (temCoordenadas(imovel)) {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${Number(imovel.latitude)},${Number(imovel.longitude)}`)}`
+  }
   const consulta = enderecoParaMapa(imovel)
   if (!consulta) return null
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(consulta)}`

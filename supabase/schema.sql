@@ -1,4 +1,11 @@
--- CRZ Imóveis — schema completo (Supabase / Postgres)
+-- CRM do corretor — schema completo (Supabase / Postgres)
+--
+-- INSTALAÇÃO NOVA: rode este arquivo inteiro, uma vez, no SQL Editor do Supabase. Só isso.
+-- Ele já traz tudo: leads, imóveis (com fotos e captador), corretores, agenda, metas e o funil do Dashboard.
+-- Pode ser repetido sem erro (não apaga nem altera dados existentes).
+--
+-- Já tem um banco antigo em uso? Não rode este arquivo para atualizar: use os arquivos de supabase/migrations/.
+--
 -- Segurança: todas as tabelas têm Row Level Security.
 --   * leads (e visitas, lembretes, histórico e imóveis vinculados): visíveis para quem criou, para o responsável atual e para o dono da imobiliária;
 --   * imóveis e corretores: todos os usuários logados leem, só quem cadastrou altera;
@@ -42,8 +49,7 @@ create unique index if not exists corretores_proprio_unico on corretores (owner_
 -- ---------------------------------------------------------------
 -- Imóveis
 -- ---------------------------------------------------------------
--- Código de referência dos imóveis (CRZ-0001, CRZ-0002...), gerado automaticamente
-create sequence if not exists imoveis_codigo_seq;
+-- Código de referência dos imóveis por tipo (CA0001, AP0001, LO0001...), gerado automaticamente
 
 create table if not exists imoveis (
   id uuid primary key default gen_random_uuid(),
@@ -360,16 +366,38 @@ create trigger leads_status_log after update on leads
   for each row execute function log_status_change();
 
 -- Código do imóvel
+create table if not exists public.imoveis_codigo_contadores (
+  prefixo text primary key,
+  ultimo integer not null default 0
+);
+alter table public.imoveis_codigo_contadores enable row level security;   -- sem políticas: só o gatilho (security definer) mexe
+
+create or replace function public.prefixo_do_imovel(p_tipo text)
+returns text language sql immutable as $$
+  select case p_tipo
+    when 'apartamento' then 'AP'
+    when 'casa' then 'CA'
+    when 'terreno' then 'TE'
+    when 'comercial' then 'LO'
+    when 'rural' then 'RU'
+    else 'OU'
+  end
+$$;
+
 create or replace function definir_codigo_do_imovel()
 returns trigger language plpgsql security definer set search_path = public as $$
 declare
-  n bigint;
+  p text;
+  n integer;
 begin
   if tg_op = 'UPDATE' then
     new.codigo := old.codigo;   -- o código nunca muda
   elsif new.codigo is null then
-    n := nextval('imoveis_codigo_seq');
-    new.codigo := 'CRZ-' || case when n < 10000 then lpad(n::text, 4, '0') else n::text end;
+    p := public.prefixo_do_imovel(new.tipo);
+    insert into public.imoveis_codigo_contadores as c (prefixo, ultimo) values (p, 1)
+      on conflict (prefixo) do update set ultimo = c.ultimo + 1
+      returning c.ultimo into n;
+    new.codigo := p || case when n < 10000 then lpad(n::text, 4, '0') else n::text end;
   end if;
   return new;
 end;
@@ -608,6 +636,309 @@ select
 from campanhas c
 left join leads l on l.campanha_id = c.id
 group by c.id;
+
+-- ===============================================================
+-- CAPTAÇÃO: proprietários, exclusividade, imóvel visto na rua, histórico de preço
+-- ===============================================================
+-- ---------------------------------------------------------------
+-- 1) Proprietários (um proprietário, vários imóveis)
+--    Cadastro compartilhado pela imobiliária: todos leem e editam; só quem criou apaga.
+-- ---------------------------------------------------------------
+create table if not exists public.proprietarios (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  nome text not null,
+  telefone1 text,
+  telefone2 text,
+  email text,
+  observacoes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+drop trigger if exists proprietarios_updated_at on public.proprietarios;
+create trigger proprietarios_updated_at before update on public.proprietarios
+  for each row execute function set_updated_at();
+
+alter table public.proprietarios enable row level security;
+drop policy if exists "proprietarios: leitura geral" on public.proprietarios;
+drop policy if exists "proprietarios: criar" on public.proprietarios;
+drop policy if exists "proprietarios: alterar" on public.proprietarios;
+drop policy if exists "proprietarios: apagar" on public.proprietarios;
+create policy "proprietarios: leitura geral" on public.proprietarios for select to authenticated using (true);
+create policy "proprietarios: criar" on public.proprietarios for insert to authenticated with check (owner_id = auth.uid());
+create policy "proprietarios: alterar" on public.proprietarios for update to authenticated using (true) with check (true);
+create policy "proprietarios: apagar" on public.proprietarios for delete to authenticated using (owner_id = auth.uid());
+grant select, insert, update, delete on public.proprietarios to authenticated;
+
+-- ---------------------------------------------------------------
+-- 2) Imóveis: proprietário, data de captação, exclusividade com vencimento, localização e "a completar"
+-- ---------------------------------------------------------------
+alter table public.imoveis
+  add column if not exists proprietario_id uuid references public.proprietarios(id) on delete set null,
+  add column if not exists captado_em date,
+  add column if not exists exclusividade_ate date,
+  add column if not exists latitude numeric(9,6) check (latitude between -90 and 90),
+  add column if not exists longitude numeric(9,6) check (longitude between -180 and 180),
+  add column if not exists a_completar boolean not null default false;   -- captação rápida: faltam dados
+
+-- imóveis antigos: a data de captação é o dia em que foram cadastrados
+update public.imoveis set captado_em = created_at::date where captado_em is null;
+alter table public.imoveis alter column captado_em set default current_date;
+alter table public.imoveis alter column captado_em set not null;
+
+create index if not exists imoveis_proprietario_idx on public.imoveis (proprietario_id);
+create index if not exists imoveis_exclusividade_idx on public.imoveis (exclusividade_ate) where exclusividade_ate is not null;
+
+-- ---------------------------------------------------------------
+-- 3) Gatilhos do proprietário
+--    * imóvel com nome de proprietário e sem vínculo: acha o proprietário (mesmo nome e telefone) ou cria
+--    * o imóvel guarda uma cópia de nome e telefones do proprietário; editar de um lado atualiza o outro
+--      e todos os imóveis dele. (pg_trigger_depth evita laços entre os gatilhos.)
+-- ---------------------------------------------------------------
+create or replace function public.vincular_proprietario_do_imovel()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare
+  p public.proprietarios%rowtype;
+  v_tel text;
+  v_nome text := btrim(coalesce(new.proprietario_nome, ''));
+begin
+  if pg_trigger_depth() > 1 then
+    return new;
+  end if;
+
+  if new.proprietario_id is not null then
+    select * into p from public.proprietarios pr where pr.id = new.proprietario_id;
+    if found then
+      if v_nome = '' then
+        -- campos em branco no imóvel: assume os do proprietário
+        new.proprietario_nome := p.nome;
+        new.proprietario_telefone1 := p.telefone1;
+        new.proprietario_telefone2 := p.telefone2;
+      elsif (p.nome, p.telefone1, p.telefone2) is distinct from (v_nome, new.proprietario_telefone1, new.proprietario_telefone2) then
+        -- alteração feita pelo imóvel vale para o proprietário e para os outros imóveis dele
+        update public.proprietarios pr
+           set nome = v_nome, telefone1 = new.proprietario_telefone1, telefone2 = new.proprietario_telefone2
+         where pr.id = p.id;
+        update public.imoveis i
+           set proprietario_nome = v_nome, proprietario_telefone1 = new.proprietario_telefone1, proprietario_telefone2 = new.proprietario_telefone2
+         where i.proprietario_id = p.id and i.id <> new.id;
+        new.proprietario_nome := v_nome;
+      end if;
+    else
+      new.proprietario_id := null;
+    end if;
+  end if;
+
+  if new.proprietario_id is null and v_nome <> '' then
+    v_tel := regexp_replace(coalesce(new.proprietario_telefone1, ''), '\D', '', 'g');
+    select * into p from public.proprietarios pr
+     where lower(btrim(pr.nome)) = lower(v_nome)
+       and regexp_replace(coalesce(pr.telefone1, ''), '\D', '', 'g') = v_tel
+     order by pr.created_at limit 1;
+    if not found then
+      insert into public.proprietarios (owner_id, nome, telefone1, telefone2)
+      values (coalesce(new.owner_id, auth.uid()), v_nome, new.proprietario_telefone1, new.proprietario_telefone2)
+      returning * into p;
+    end if;
+    new.proprietario_id := p.id;
+    new.proprietario_nome := p.nome;
+    new.proprietario_telefone1 := p.telefone1;
+    new.proprietario_telefone2 := p.telefone2;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists imoveis_vincular_proprietario on public.imoveis;
+create trigger imoveis_vincular_proprietario before insert or update on public.imoveis
+  for each row execute function public.vincular_proprietario_do_imovel();
+
+create or replace function public.espelhar_proprietario_nos_imoveis()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if pg_trigger_depth() > 1 then
+    return new;
+  end if;
+  update public.imoveis
+     set proprietario_nome = new.nome, proprietario_telefone1 = new.telefone1, proprietario_telefone2 = new.telefone2
+   where proprietario_id = new.id
+     and (proprietario_nome, proprietario_telefone1, proprietario_telefone2) is distinct from (new.nome, new.telefone1, new.telefone2);
+  return new;
+end;
+$$;
+
+drop trigger if exists proprietarios_espelhar on public.proprietarios;
+create trigger proprietarios_espelhar after update on public.proprietarios
+  for each row execute function public.espelhar_proprietario_nos_imoveis();
+
+-- imóveis que já existiam passam a ter proprietário cadastrado (agrupados por nome + telefone)
+alter table public.imoveis disable trigger imoveis_updated_at;   -- não mexe em "atualizado em"
+update public.imoveis set proprietario_nome = proprietario_nome
+ where proprietario_id is null and btrim(coalesce(proprietario_nome, '')) <> '';
+alter table public.imoveis enable trigger imoveis_updated_at;
+
+-- ---------------------------------------------------------------
+-- 4) Histórico de preço (preenchido por gatilho a cada mudança de valor)
+-- ---------------------------------------------------------------
+create table if not exists public.imovel_precos (
+  id uuid primary key default gen_random_uuid(),
+  imovel_id uuid not null references public.imoveis(id) on delete cascade,
+  tipo text not null check (tipo in ('venda', 'aluguel')),
+  valor_anterior numeric(14,2),   -- vazio no primeiro registro
+  valor_novo numeric(14,2),       -- vazio se o valor foi retirado
+  alterado_em timestamptz not null default now(),
+  alterado_por uuid default auth.uid()
+);
+
+create index if not exists imovel_precos_imovel_idx on public.imovel_precos (imovel_id, alterado_em desc);
+
+alter table public.imovel_precos enable row level security;
+drop policy if exists "precos: leitura geral" on public.imovel_precos;
+create policy "precos: leitura geral" on public.imovel_precos for select to authenticated using (true);
+grant select on public.imovel_precos to authenticated;   -- só o gatilho grava
+
+create or replace function public.registrar_historico_de_preco()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if tg_op = 'INSERT' then
+    if new.valor_venda is not null then
+      insert into public.imovel_precos (imovel_id, tipo, valor_anterior, valor_novo) values (new.id, 'venda', null, new.valor_venda);
+    end if;
+    if new.valor_aluguel is not null then
+      insert into public.imovel_precos (imovel_id, tipo, valor_anterior, valor_novo) values (new.id, 'aluguel', null, new.valor_aluguel);
+    end if;
+  else
+    if new.valor_venda is distinct from old.valor_venda then
+      insert into public.imovel_precos (imovel_id, tipo, valor_anterior, valor_novo) values (new.id, 'venda', old.valor_venda, new.valor_venda);
+    end if;
+    if new.valor_aluguel is distinct from old.valor_aluguel then
+      insert into public.imovel_precos (imovel_id, tipo, valor_anterior, valor_novo) values (new.id, 'aluguel', old.valor_aluguel, new.valor_aluguel);
+    end if;
+  end if;
+  return null;
+end;
+$$;
+
+drop trigger if exists imoveis_historico_preco on public.imoveis;
+create trigger imoveis_historico_preco after insert or update of valor_venda, valor_aluguel on public.imoveis
+  for each row execute function public.registrar_historico_de_preco();
+
+-- imóveis que já existiam: primeiro registro do histórico com o valor atual, na data do cadastro
+insert into public.imovel_precos (imovel_id, tipo, valor_anterior, valor_novo, alterado_em)
+select i.id, 'venda', null, i.valor_venda, i.created_at from public.imoveis i
+ where i.valor_venda is not null
+   and not exists (select 1 from public.imovel_precos p where p.imovel_id = i.id and p.tipo = 'venda');
+insert into public.imovel_precos (imovel_id, tipo, valor_anterior, valor_novo, alterado_em)
+select i.id, 'aluguel', null, i.valor_aluguel, i.created_at from public.imoveis i
+ where i.valor_aluguel is not null
+   and not exists (select 1 from public.imovel_precos p where p.imovel_id = i.id and p.tipo = 'aluguel');
+
+-- ===============================================================
+-- SITE PÚBLICO (vitrine) e configurações
+-- ===============================================================
+-- ---------------------------------------------------------------
+-- 2) Imóvel: aparece no site? (imóveis "a completar" nunca aparecem)
+-- ---------------------------------------------------------------
+alter table public.imoveis add column if not exists publicar_no_site boolean not null default true;
+
+-- ---------------------------------------------------------------
+-- 3) Configurações do sistema (hoje: WhatsApp do site). Todos os usuários leem; só o dono da imobiliária altera.
+-- ---------------------------------------------------------------
+create table if not exists public.configuracoes (
+  chave text primary key,
+  valor text not null,
+  updated_at timestamptz not null default now(),
+  updated_by uuid default auth.uid()
+);
+
+drop trigger if exists configuracoes_updated_at on public.configuracoes;
+create trigger configuracoes_updated_at before update on public.configuracoes
+  for each row execute function set_updated_at();
+
+alter table public.configuracoes enable row level security;
+drop policy if exists "configuracoes: leitura" on public.configuracoes;
+drop policy if exists "configuracoes: criar (dono)" on public.configuracoes;
+drop policy if exists "configuracoes: alterar (dono)" on public.configuracoes;
+create policy "configuracoes: leitura" on public.configuracoes for select to authenticated using (true);
+create policy "configuracoes: criar (dono)" on public.configuracoes for insert to authenticated with check (public.eh_dono_da_imobiliaria());
+create policy "configuracoes: alterar (dono)" on public.configuracoes for update to authenticated using (public.eh_dono_da_imobiliaria()) with check (public.eh_dono_da_imobiliaria());
+grant select, insert, update on public.configuracoes to authenticated;
+
+insert into public.configuracoes (chave, valor) values
+  ('whatsapp_vitrine', '5522992592683'),
+  ('nome_responsavel', 'Wallace Cruz'),
+  ('creci', '108.111'),
+  ('email_contato', 'negociosimobiliarioscrz@gmail.com')
+on conflict (chave) do nothing;
+
+-- Mensagens de quem quer anunciar um imóvel com a imobiliária (página "/anuncie").
+-- Qualquer visitante pode enviar (insert); só o time (authenticated) lê e acompanha.
+create table if not exists public.anuncios_recebidos (
+  id uuid primary key default gen_random_uuid(),
+  nome text not null,
+  telefone text not null,
+  email text,
+  tipo_imovel text,
+  cidade text,
+  bairro text,
+  mensagem text,
+  atendido boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+alter table public.anuncios_recebidos enable row level security;
+drop policy if exists "anuncios_recebidos: enviar (qualquer visitante)" on public.anuncios_recebidos;
+drop policy if exists "anuncios_recebidos: ver (time)" on public.anuncios_recebidos;
+drop policy if exists "anuncios_recebidos: alterar (time)" on public.anuncios_recebidos;
+create policy "anuncios_recebidos: enviar (qualquer visitante)" on public.anuncios_recebidos
+  for insert to anon, authenticated with check (true);
+create policy "anuncios_recebidos: ver (time)" on public.anuncios_recebidos
+  for select to authenticated using (true);
+create policy "anuncios_recebidos: alterar (time)" on public.anuncios_recebidos
+  for update to authenticated using (true) with check (true);
+
+grant insert on public.anuncios_recebidos to anon, authenticated;
+grant select, update on public.anuncios_recebidos to authenticated;
+
+-- ---------------------------------------------------------------
+-- 4) Dados públicos do site. O visitante (papel "anon") NÃO lê as tabelas: só estas views, que mostram
+--    apenas imóveis disponíveis, marcados para o site e completos, e só campos seguros
+--    (sem proprietário, endereço exato, localização, chave, captador ou valores internos).
+-- ---------------------------------------------------------------
+drop view if exists public.vitrine_imoveis;
+create view public.vitrine_imoveis as
+select i.id, i.codigo, i.titulo, i.tipo, i.finalidade, i.bairro, i.cidade,
+       i.valor_venda, i.valor_aluguel,
+       i.dormitorios, i.suites, i.banheiros, i.vagas_cobertas, i.vagas_descobertas,
+       i.area_construida, i.area_terreno,
+       i.fotos[1] as foto_capa, coalesce(array_length(i.fotos, 1), 0) as total_fotos,
+       i.created_at
+  from public.imoveis i
+ where i.status = 'disponivel' and i.publicar_no_site and not i.a_completar;
+
+drop view if exists public.vitrine_imovel;
+create view public.vitrine_imovel as
+select i.id, i.codigo, i.titulo, i.tipo, i.finalidade, i.bairro, i.cidade,
+       i.valor_venda, i.valor_aluguel, i.valor_condominio, i.sem_condominio, i.valor_iptu, i.iptu_periodo,
+       i.padrao, i.aceita_financiamento, i.estado_imovel, i.posicao, i.posicao_solar, i.vista_mar,
+       i.area_construida, i.area_terreno, i.dormitorios, i.suites, i.banheiros, i.salas,
+       i.vagas_cobertas, i.vagas_descobertas, i.elevador, i.andares_predio, i.andar_imovel,
+       i.caracteristicas, i.pisos, i.comentarios, i.fotos, i.created_at
+  from public.imoveis i
+ where i.status = 'disponivel' and i.publicar_no_site and not i.a_completar;
+
+drop view if exists public.vitrine_contato;
+create view public.vitrine_contato as
+select
+  max(c.valor) filter (where c.chave = 'whatsapp_vitrine') as whatsapp,
+  max(c.valor) filter (where c.chave = 'nome_responsavel') as nome_responsavel,
+  max(c.valor) filter (where c.chave = 'creci') as creci,
+  max(c.valor) filter (where c.chave = 'email_contato') as email_contato
+from public.configuracoes c
+where c.chave in ('whatsapp_vitrine', 'nome_responsavel', 'creci', 'email_contato');
+
+grant select on public.vitrine_imoveis, public.vitrine_imovel, public.vitrine_contato to anon, authenticated;
 
 -- ---------------------------------------------------------------
 -- Permissões da API (necessárias em projetos Supabase que não concedem acesso automático às tabelas

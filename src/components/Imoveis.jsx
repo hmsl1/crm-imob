@@ -5,7 +5,8 @@ import { precosDoImovel } from '../lib/format.js'
 import { bairrosDosImoveis, atendeBairro } from '../lib/bairros.js'
 import { useNomeDoCorretor } from '../lib/corretor.js'
 import Topo from './Topo.jsx'
-import { ImovelModal, ImovelDetalhes } from '../componentesPreguicosos.js'
+import { ImovelModal, ImovelDetalhes, CaptacaoRapida } from '../componentesPreguicosos.js'
+import { situacaoExclusividade } from '../lib/exclusividade.js'
 
 const rotulo = (lista, id) => lista.find((i) => i.id === id)?.rotulo ?? id
 
@@ -23,6 +24,8 @@ export default function Imoveis({ usuario, pagina, onPagina }) {
   const [status, setStatus] = useState('')
   const [finalidade, setFinalidade] = useState('')
   const [bairro, setBairro] = useState('')
+  const [soCompletar, setSoCompletar] = useState(false) // só os cadastros rápidos que ainda faltam completar
+  const [captando, setCaptando] = useState(false)
   // null | { modo: 'ver' | 'editar' | 'novo', id?: string, aba?: string }
   const [aberto, setAberto] = useState(null)
   // aba da tela de detalhes; lembrada ao voltar do formulário de edição
@@ -64,6 +67,7 @@ export default function Imoveis({ usuario, pagina, onPagina }) {
     const termo = busca.trim().toLowerCase()
     return imoveis.filter((i) => {
       if (!atendeBairro(i, bairroAtivo)) return false
+      if (soCompletar && !i.a_completar) return false
       if (tipo && i.tipo !== tipo) return false
       if (status && i.status !== status) return false
       if (!atendeFinalidade(i.finalidade, finalidade)) return false
@@ -72,9 +76,10 @@ export default function Imoveis({ usuario, pagina, onPagina }) {
         (v) => v && v.toLowerCase().includes(termo)
       )
     })
-  }, [imoveis, busca, tipo, status, finalidade, bairroAtivo])
+  }, [imoveis, busca, tipo, status, finalidade, bairroAtivo, soCompletar])
 
-  const filtrando = busca || tipo || status || finalidade || bairroAtivo
+  const filtrando = busca || tipo || status || finalidade || bairroAtivo || soCompletar
+  const totalCompletar = imoveis.filter((i) => i.a_completar).length
   const imovelAberto = aberto?.id ? imoveis.find((i) => i.id === aberto.id) : null
 
   // Depois de salvar uma edição, volta para a visualização do imóvel já atualizado.
@@ -95,6 +100,7 @@ export default function Imoveis({ usuario, pagina, onPagina }) {
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
         />
+        <button onClick={() => setCaptando(true)}>Captação rápida</button>
         <button className="primario" onClick={() => setAberto({ modo: 'novo' })}>
           + Novo imóvel
         </button>
@@ -133,6 +139,12 @@ export default function Imoveis({ usuario, pagina, onPagina }) {
             </option>
           ))}
         </select>
+        {totalCompletar > 0 && (
+          <label className="check filtro-completar">
+            <input type="checkbox" checked={soCompletar} onChange={(e) => setSoCompletar(e.target.checked)} />
+            A completar ({totalCompletar})
+          </label>
+        )}
         <span className="contagem-filtro">
           {filtrados.length} {filtrados.length === 1 ? 'imóvel' : 'imóveis'}
         </span>
@@ -175,6 +187,7 @@ export default function Imoveis({ usuario, pagina, onPagina }) {
                   )}
                   <span className={'selo status-imovel ' + i.status}>{rotulo(STATUS_IMOVEL, i.status)}</span>
                   {i.fotos?.length > 1 && <span className="selo-fotos">{i.fotos.length} fotos</span>}
+                  {i.a_completar && <span className="selo a-completar">A completar</span>}
                 </div>
                 <div className="corpo">
                   {precos.length === 0 ? (
@@ -203,6 +216,10 @@ export default function Imoveis({ usuario, pagina, onPagina }) {
                       .join(' · ')}
                   </span>
                   {i.proprietario_nome && <span className="detalhes">Proprietário: {i.proprietario_nome}</span>}
+                  {(() => {
+                    const ex = situacaoExclusividade(i)
+                    return ex.estado === 'vence' || ex.estado === 'vencida' ? <span className={'alerta-exclusividade ' + ex.estado}>{ex.texto}</span> : null
+                  })()}
                 </div>
               </article>
             )
@@ -218,6 +235,10 @@ export default function Imoveis({ usuario, pagina, onPagina }) {
           corretor={nomeCorretor}
           somenteLeitura={Boolean(imovelAberto.owner_id) && imovelAberto.owner_id !== usuario.id}
           existentes={imoveis}
+          onAbrirOutro={(id) => {
+            setAbaDetalhe('principal')
+            setAberto({ modo: 'ver', id })
+          }}
           aba={abaDetalhe}
           onAba={setAbaDetalhe}
           onFechar={() => setAberto(null)}
@@ -225,6 +246,18 @@ export default function Imoveis({ usuario, pagina, onPagina }) {
           onEditar={(aba) => setAberto({ modo: 'editar', id: imovelAberto.id, aba: typeof aba === 'string' ? aba : abaDetalhe })}
           // edição de um campo: atualiza só esse imóvel na lista, sem recarregar tudo
           onAtualizado={(atualizado) => setImoveis((lista) => lista.map((i) => (i.id === atualizado.id ? atualizado : i)))}
+        />
+      )}
+
+      {captando && (
+        <CaptacaoRapida
+          usuario={usuario}
+          existentes={imoveis}
+          onFechar={() => setCaptando(false)}
+          onSalvo={async () => {
+            setCaptando(false)
+            await carregar()
+          }}
         />
       )}
 

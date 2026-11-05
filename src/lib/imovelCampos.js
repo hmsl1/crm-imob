@@ -1,6 +1,7 @@
 // Registro dos campos do imóvel para a tela de detalhes: o que mostrar, em qual aba, e como
 // editar cada campo individualmente. Funções puras (sem React nem Supabase), fáceis de testar.
 import { moeda } from './format.js'
+import { dataBR } from './datas.js'
 import {
   TIPOS_IMOVEL,
   FINALIDADES,
@@ -54,10 +55,12 @@ export const CAMPOS_POR_ABA = {
         // mudar a finalidade pode exigir/descartar valores, por isso edita os três juntos
         campo('finalidade', 'Finalidade', 'finalidade', { chaves: ['finalidade', 'valor_venda', 'valor_aluguel'] }),
         campo('status', 'Disponibilidade', 'select', { opcoes: STATUS_IMOVEL }),
+        campo('publicar_no_site', 'Mostrar no site', 'bool'),
         campo('endereco', 'Endereço', 'texto', { mapa: true }),
         campo('bairro', 'Bairro', 'texto'),
         campo('cidade', 'Cidade', 'texto'),
         campo('captador_id', 'Captador', 'corretor'),
+        campo('captado_em', 'Data de captação', 'data'),
       ],
     },
     {
@@ -70,7 +73,7 @@ export const CAMPOS_POR_ABA = {
         campo('valor_iptu', 'IPTU', 'iptu', { chaves: ['valor_iptu', 'iptu_periodo'] }),
         campo('padrao', 'Padrão do imóvel', 'select', { opcoes: PADROES, ...SELECT_OPCIONAL }),
         campo('aceita_financiamento', 'Aceita financiamento', 'simnao'),
-        campo('exclusividade', 'Exclusividade', 'simnao'),
+        campo('exclusividade', 'Exclusividade', 'exclusividade', { chaves: ['exclusividade', 'exclusividade_ate'] }),
         campo('chave_com_proprietario', 'Chave com o proprietário', 'bool'),
       ],
     },
@@ -147,6 +150,13 @@ export function exibirCampo(c, i, ctx = {}) {
       return ctx.corretores?.find((x) => x.id === i.captador_id)?.nome ?? null
     case 'finalidade':
       return rotuloDe(FINALIDADES, i.finalidade)
+    case 'data':
+      return vazio(v) ? null : dataBR(v)
+    case 'exclusividade': {
+      if (i.exclusividade === null || i.exclusividade === undefined) return null
+      if (!i.exclusividade) return 'Não'
+      return i.exclusividade_ate ? `Sim · até ${dataBR(i.exclusividade_ate)}` : 'Sim · sem data de vencimento'
+    }
     case 'condominio':
       if (i.sem_condominio) return 'Sem condomínio'
       return vazio(i.valor_condominio) ? null : `${moeda(i.valor_condominio)} /mês`

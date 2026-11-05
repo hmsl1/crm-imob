@@ -16,9 +16,11 @@ export const EtapaModal = preguicoso(() => import('./components/EtapaModal.jsx')
 export const LeadModal = preguicoso(() => import('./components/LeadModal.jsx'))
 export const ImovelModal = preguicoso(() => import('./components/ImovelModal.jsx'))
 export const ImovelDetalhes = preguicoso(() => import('./components/ImovelDetalhes.jsx'))
+export const CaptacaoRapida = preguicoso(() => import('./components/CaptacaoRapida.jsx'))
+export const Proprietarios = preguicoso(() => import('./components/Proprietarios.jsx'))
 export const PerfilModal = preguicoso(() => import('./components/PerfilModal.jsx'))
 
-const TODOS = [Imoveis, Agenda, MetasModal, EtapaModal, LeadModal, ImovelDetalhes, ImovelModal, PerfilModal]
+const TODOS = [Imoveis, Proprietarios, CaptacaoRapida, Agenda, MetasModal, EtapaModal, LeadModal, ImovelDetalhes, ImovelModal, PerfilModal]
 
 // Baixa o restante quando o navegador está ocioso (e não gasta dados no modo "economia de dados")
 export function precarregarRestante() {

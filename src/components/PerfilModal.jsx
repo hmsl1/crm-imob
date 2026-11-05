@@ -1,6 +1,19 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { salvarNomeDoCorretor } from '../lib/corretor.js'
+import { ehDono } from '../lib/dashboard.js'
+import {
+  CHAVE_WHATSAPP_VITRINE,
+  CHAVE_NOME_RESPONSAVEL,
+  CHAVE_CRECI,
+  CHAVE_EMAIL_CONTATO,
+  validarWhatsapp,
+  formatarWhatsapp,
+  validarNomeResponsavel,
+  validarCreci,
+  validarEmailContato,
+} from '../lib/configuracoes.js'
+import { digitosWhatsapp } from '../lib/format.js'
 import { validarNovaSenha, traduzirErroAuth } from '../lib/senha.js'
 import { useFechamentoAnimado } from '../lib/useFechamentoAnimado.js'
 
@@ -14,6 +27,56 @@ export default function PerfilModal({ usuario, nomeAtual, onFechar }) {
   const [erroSenha, setErroSenha] = useState('')
   const [avisoSenha, setAvisoSenha] = useState('')
   const [trocando, setTrocando] = useState(false)
+  const dono = ehDono(usuario.email)
+  const [whatsapp, setWhatsapp] = useState('')
+  const [nomeResponsavel, setNomeResponsavel] = useState('')
+  const [creci, setCreci] = useState('')
+  const [emailContato, setEmailContato] = useState('')
+  const [erroSite, setErroSite] = useState('')
+  const [avisoSite, setAvisoSite] = useState('')
+  const [salvandoSite, setSalvandoSite] = useState(false)
+
+  useEffect(() => {
+    if (!dono) return
+    let ativo = true
+    supabase
+      .from('configuracoes')
+      .select('chave, valor')
+      .in('chave', [CHAVE_WHATSAPP_VITRINE, CHAVE_NOME_RESPONSAVEL, CHAVE_CRECI, CHAVE_EMAIL_CONTATO])
+      .then(({ data }) => {
+        if (!ativo || !data) return
+        const valor = (chave) => data.find((d) => d.chave === chave)?.valor ?? ''
+        setWhatsapp(formatarWhatsapp(valor(CHAVE_WHATSAPP_VITRINE)))
+        setNomeResponsavel(valor(CHAVE_NOME_RESPONSAVEL))
+        setCreci(valor(CHAVE_CRECI))
+        setEmailContato(valor(CHAVE_EMAIL_CONTATO))
+      })
+    return () => {
+      ativo = false
+    }
+  }, [dono])
+
+  async function salvarSite(e) {
+    e.preventDefault()
+    const problema =
+      validarWhatsapp(whatsapp) || validarNomeResponsavel(nomeResponsavel) || validarCreci(creci) || validarEmailContato(emailContato)
+    if (problema) return setErroSite(problema)
+    setErroSite('')
+    setAvisoSite('')
+    setSalvandoSite(true)
+    const { error } = await supabase.from('configuracoes').upsert(
+      [
+        { chave: CHAVE_WHATSAPP_VITRINE, valor: digitosWhatsapp(whatsapp) },
+        { chave: CHAVE_NOME_RESPONSAVEL, valor: nomeResponsavel.trim() },
+        { chave: CHAVE_CRECI, valor: creci.trim() },
+        { chave: CHAVE_EMAIL_CONTATO, valor: emailContato.trim() },
+      ],
+      { onConflict: 'chave' }
+    )
+    setSalvandoSite(false)
+    if (error) return setErroSite(error.message)
+    setAvisoSite('Dados do site atualizados.')
+  }
 
   async function salvar(e) {
     e.preventDefault()
@@ -101,6 +164,38 @@ export default function PerfilModal({ usuario, nomeAtual, onFechar }) {
             <button disabled={trocando}>{trocando ? 'Alterando…' : 'Alterar senha'}</button>
           </div>
         </form>
+
+        {dono && (
+          <form className="troca-senha" onSubmit={salvarSite} noValidate>
+            <h3>Dados do site</h3>
+            <label>
+              WhatsApp que recebe as mensagens dos clientes
+              <input type="tel" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="(22) 99999-9999" />
+            </label>
+            <p className="dica">É para esse número que vai a mensagem quando um cliente clica em "Falar no WhatsApp" no site público.</p>
+            <div className="duas">
+              <label>
+                Nome do responsável
+                <input value={nomeResponsavel} onChange={(e) => setNomeResponsavel(e.target.value)} placeholder="Ex.: Wallace Cruz" />
+              </label>
+              <label>
+                CRECI
+                <input value={creci} onChange={(e) => setCreci(e.target.value)} placeholder="Ex.: 108.111" />
+              </label>
+            </div>
+            <label>
+              E-mail de contato
+              <input type="email" value={emailContato} onChange={(e) => setEmailContato(e.target.value)} />
+            </label>
+            <p className="dica">Nome, CRECI e e-mail aparecem no rodapé do site público.</p>
+            {erroSite && <p className="erro">{erroSite}</p>}
+            {avisoSite && <p className="aviso">{avisoSite}</p>}
+            <div className="acoes">
+              <span className="espaco" />
+              <button disabled={salvandoSite}>{salvandoSite ? 'Salvando…' : 'Salvar dados do site'}</button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   )

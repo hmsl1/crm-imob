@@ -3,7 +3,9 @@ import { TIPOS_IMOVEL, FINALIDADES, ABAS_IMOVEL } from '../lib/imovel.js'
 import { CAMPOS_POR_ABA } from '../lib/imovelCampos.js'
 import { precosDoImovel } from '../lib/format.js'
 import { useFechamentoAnimado } from '../lib/useFechamentoAnimado.js'
-import CampoImovel, { BotaoMapa } from './CampoImovel.jsx'
+import CampoImovel, { BotaoMapa, AlertaExclusividade } from './CampoImovel.jsx'
+import HistoricoPreco from './HistoricoPreco.jsx'
+import { comCodigo } from '../lib/imovel.js'
 import StatusImovel from './StatusImovel.jsx'
 import CompartilharFicha from './CompartilharFicha.jsx'
 
@@ -11,7 +13,7 @@ const rotulo = (lista, id) => lista.find((i) => i.id === id)?.rotulo ?? id
 
 // Visualização do imóvel em abas (as mesmas do formulário). Cada campo tem um lápis para editar
 // só aquele campo; o botão "Editar" abre o formulário completo.
-export default function ImovelDetalhes({ imovel, corretores, corretor = '', existentes = [], somenteLeitura = false, aba, onAba, onFechar, onEditar, onAtualizado }) {
+export default function ImovelDetalhes({ imovel, corretores, corretor = '', existentes = [], somenteLeitura = false, aba, onAba, onFechar, onEditar, onAtualizado, onAbrirOutro }) {
   const { saindo, fechar } = useFechamentoAnimado()
   const [atual, setAtual] = useState(0) // foto exibida na galeria
   const [editando, setEditando] = useState(null) // id do campo em edição
@@ -55,6 +57,9 @@ export default function ImovelDetalhes({ imovel, corretores, corretor = '', exis
     window.addEventListener('keydown', aoTecla)
     return () => window.removeEventListener('keydown', aoTecla)
   }, [aba, editando, total, fechar, onFechar])
+
+  // outros imóveis do mesmo proprietário
+  const outrosDoProprietario = imovel.proprietario_id ? existentes.filter((i) => i.proprietario_id === imovel.proprietario_id && i.id !== imovel.id) : []
 
   const local = [rotulo(TIPOS_IMOVEL, imovel.tipo), imovel.bairro, imovel.cidade].filter(Boolean).join(' · ')
 
@@ -125,8 +130,16 @@ export default function ImovelDetalhes({ imovel, corretores, corretor = '', exis
           )}
           <span className="etiquetas">
             <span className="etiqueta">{rotulo(FINALIDADES, imovel.finalidade)}</span>
+            {imovel.a_completar && <span className="etiqueta a-completar">A completar</span>}
           </span>
         </div>
+
+        {imovel.a_completar && (
+          <p className="aviso-completar" role="status">
+            Captação rápida: faltam dados. Abra “Editar” e complete valores, detalhes e fotos para tirar o selo “A completar”.
+          </p>
+        )}
+        <AlertaExclusividade imovel={imovel} />
 
         <StatusImovel imovel={imovel} somenteLeitura={somenteLeitura} onAtualizado={onAtualizado} />
 
@@ -199,8 +212,20 @@ export default function ImovelDetalhes({ imovel, corretores, corretor = '', exis
           <section className="secao" key={secao.id}>
             <h3>{secao.titulo}</h3>
             <dl className="dados">{secao.campos.filter((c) => !c.visivel || c.visivel(imovel)).map(renderCampo)}</dl>
+            {secao.id === 'proprietario' && outrosDoProprietario.length > 0 && (
+              <div className="outros-imoveis">
+                <span className="suave">Outros imóveis deste proprietário:</span>
+                {outrosDoProprietario.map((o) => (
+                  <button key={o.id} type="button" className="link pequeno" onClick={() => onAbrirOutro?.(o.id)}>
+                    {comCodigo(o)}
+                  </button>
+                ))}
+              </div>
+            )}
           </section>
         ))}
+
+        {aba === 'principal' && <HistoricoPreco imovel={imovel} />}
       </div>
     </div>
     {compartilhando && <CompartilharFicha imovel={imovel} corretor={corretor} onFechar={() => setCompartilhando(false)} />}

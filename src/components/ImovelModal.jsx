@@ -24,6 +24,8 @@ import { nomeDoEmail } from '../lib/format.js'
 import { enviarFoto, apagarFotos, moverFoto, MAX_FOTOS } from '../lib/imagens.js'
 import { useFechamentoAnimado } from '../lib/useFechamentoAnimado.js'
 import { lerRascunho, salvarRascunho, limparRascunho, temConteudo } from '../lib/rascunho.js'
+import { acharPorTelefone, contarImoveis } from '../lib/proprietario.js'
+import { hojeISO } from '../lib/datas.js'
 import Opcoes from './Opcoes.jsx'
 
 const NOVO_CORRETOR = '__novo__'
@@ -66,6 +68,7 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
   const [aba, setAba] = useState(abaInicial ?? rascunho?.aba ?? 'principal')
   const [trocouAba, setTrocouAba] = useState(false) // liga o fade entre abas depois da primeira troca
   const [corretores, setCorretores] = useState([])
+  const [proprietarios, setProprietarios] = useState([])
   const [fotos, setFotos] = useState(rascunho?.fotos ?? imovel?.fotos ?? [])
   const [recuperadoEm, setRecuperadoEm] = useState(rascunho?.salvoEm ?? null)
   const [salvoAutoEm, setSalvoAutoEm] = useState(null)
@@ -142,6 +145,34 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
       ativo = false
     }
   }, [usuario.email])
+
+  // Proprietários já cadastrados (a tabela é legível por todos)
+  useEffect(() => {
+    let ativo = true
+    supabase
+      .from('proprietarios')
+      .select('*')
+      .order('nome')
+      .then(({ data }) => ativo && setProprietarios(data ?? []))
+    return () => {
+      ativo = false
+    }
+  }, [])
+
+  // Escolher um proprietário já cadastrado preenche nome e telefones; "novo" mantém o que está digitado
+  function escolherProprietario(id) {
+    const p = proprietarios.find((x) => x.id === id)
+    setForm((f) =>
+      p
+        ? { ...f, proprietario_id: p.id, proprietario_nome: p.nome ?? '', proprietario_telefone1: p.telefone1 ?? '', proprietario_telefone2: p.telefone2 ?? '' }
+        : { ...f, proprietario_id: '' }
+    )
+  }
+
+  const imoveisPorProprietario = contarImoveis(existentes)
+  const proprietarioVinculado = proprietarios.find((p) => p.id === form.proprietario_id)
+  // sem vínculo: avisa se o telefone digitado já é de um proprietário cadastrado
+  const mesmoTelefone = form.proprietario_id ? [] : acharPorTelefone(proprietarios, [form.proprietario_telefone1, form.proprietario_telefone2])
 
   async function escolherCorretor(e) {
     const valor = e.target.value
@@ -328,6 +359,20 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
             <>
               <section className="secao">
                 <h3>Proprietário</h3>
+                {proprietarios.length > 0 && (
+                  <label>
+                    Proprietário cadastrado
+                    <select value={form.proprietario_id} onChange={(e) => escolherProprietario(e.target.value)}>
+                      <option value="">Novo proprietário (preencha abaixo)</option>
+                      {proprietarios.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.nome}
+                          {p.telefone1 ? ` · ${p.telefone1}` : ''} ({imoveisPorProprietario[p.id] ?? 0} {(imoveisPorProprietario[p.id] ?? 0) === 1 ? 'imóvel' : 'imóveis'})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
                 <label>
                   Nome do proprietário *
                   <input {...texto('proprietario_nome')} autoComplete="off" />
@@ -343,6 +388,22 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
                   </label>
                 </div>
                 <p className="dica">Informe pelo menos um telefone.</p>
+                {proprietarioVinculado && (
+                  <p className="dica" role="status">
+                    Proprietário já cadastrado: nome e telefones alterados aqui valem para todos os imóveis dele ({imoveisPorProprietario[proprietarioVinculado.id] ?? 0}).
+                  </p>
+                )}
+                {mesmoTelefone.length > 0 && (
+                  <div className="aviso-proprietario" role="status">
+                    <span>
+                      Este telefone já é de <strong>{mesmoTelefone[0].nome}</strong> ({imoveisPorProprietario[mesmoTelefone[0].id] ?? 0}{' '}
+                      {(imoveisPorProprietario[mesmoTelefone[0].id] ?? 0) === 1 ? 'imóvel' : 'imóveis'}).
+                    </span>
+                    <button type="button" className="pequeno" onClick={() => escolherProprietario(mesmoTelefone[0].id)}>
+                      Usar este proprietário
+                    </button>
+                  </div>
+                )}
               </section>
 
               <section className="secao">
@@ -371,6 +432,10 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
                     </select>
                   </label>
                 </div>
+                <label className="check">
+                  <input type="checkbox" {...marca('publicar_no_site')} />
+                  Mostrar no site da imobiliária
+                </label>
                 <label>
                   Endereço (rua e número)
                   <input {...texto('endereco')} placeholder="Ex.: Rua das Flores, 123" />
@@ -385,6 +450,10 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
                     <input {...texto('cidade')} />
                   </label>
                 </div>
+                <label>
+                  Data de captação
+                  <input type="date" {...texto('captado_em')} max={hojeISO()} />
+                </label>
                 <label>
                   Captador
                   <select value={form.captador_id} onChange={escolherCorretor}>
@@ -454,6 +523,13 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
                   <SimNao rotulo="Aceita financiamento" {...texto('aceita_financiamento')} />
                   <SimNao rotulo="Exclusividade" {...texto('exclusividade')} />
                 </div>
+                {form.exclusividade === 'sim' && (
+                  <label>
+                    Exclusividade vence em
+                    <input type="date" {...texto('exclusividade_ate')} />
+                    <span className="dica">Você é avisado na Agenda 30 dias antes do vencimento.</span>
+                  </label>
+                )}
                 <label className="check">
                   <input type="checkbox" {...marca('chave_com_proprietario')} />
                   Chave com o proprietário

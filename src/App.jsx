@@ -5,8 +5,13 @@ import Login from './components/Login.jsx'
 import AreaLogada from './components/AreaLogada.jsx'
 import NovaSenha from './components/NovaSenha.jsx'
 import { abriuPorRecuperacao } from './lib/senha.js'
+import { useRota } from './lib/useRota.js'
+import Vitrine from './components/Vitrine.jsx'
+import VitrineImovel from './components/VitrineImovel.jsx'
+import Anuncie from './components/Anuncie.jsx'
 
 export default function App() {
+  const { rota, navegar } = useRota()
   const [sessao, setSessao] = useState(null)
   const [carregando, setCarregando] = useState(configurado)
   const [pagina, setPagina] = useState('dashboard') // dashboard | leads | imoveis | agenda
@@ -15,8 +20,8 @@ export default function App() {
   const [recuperando, setRecuperando] = useState(abriuPorRecuperacao) // abriu pelo link de "esqueci a senha"
 
   useEffect(() => {
-    document.title = MARCA.nome
-  }, [])
+    if (rota.pagina === 'painel') document.title = MARCA.nome
+  }, [rota.pagina])
 
   useEffect(() => () => clearTimeout(timerPagina.current), [])
 
@@ -58,9 +63,18 @@ export default function App() {
     }, 140)
   }
 
+  if (recuperando) return <NovaSenha onConcluido={() => setRecuperando(false)} />
+
+  // Site público: aberto a qualquer visitante, sem login
+  if (rota.pagina !== 'painel') {
+    if (rota.pagina === 'redirecionar') return null // a troca de URL é instantânea (useRota já faz o replace)
+    if (rota.pagina === 'imovel') return <VitrineImovel codigo={rota.codigo} navegar={navegar} />
+    if (rota.pagina === 'anuncie') return <Anuncie navegar={navegar} />
+    return <Vitrine navegar={navegar} finalidadeInicial={rota.finalidade} />
+  }
+
   if (carregando) return <div className="centro">Carregando…</div>
   if (!sessao) return <Login />
-  if (recuperando) return <NovaSenha onConcluido={() => setRecuperando(false)} />
 
   return <AreaLogada usuario={sessao.user} pagina={pagina} saindoPagina={saindoPagina} onPagina={trocarPagina} />
 }
