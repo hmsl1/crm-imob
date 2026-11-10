@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase.js'
-import { digitosWhatsapp, linkWhatsapp } from '../lib/format.js'
+import { digitosWhatsapp } from '../lib/format.js'
 import { validarWhatsapp } from '../lib/configuracoes.js'
-import { useContatoSite } from '../lib/useContatoSite.js'
 import LayoutPublico from './LayoutPublico.jsx'
 
 const VAZIO = { nome: '', telefone: '', email: '', mensagem: '' }
@@ -10,7 +9,6 @@ const VAZIO = { nome: '', telefone: '', email: '', mensagem: '' }
 // Página "Contato": fala com a equipe (WhatsApp/e-mail) e um formulário de contato geral
 // ("o que você procura"), diferente do pop-up "Anuncie seu imóvel" (que é para quem quer vender/alugar).
 export default function Contato({ navegar }) {
-  const contato = useContatoSite()
   const [form, setForm] = useState(VAZIO)
   const [erro, setErro] = useState('')
   const [enviando, setEnviando] = useState(false)
@@ -38,22 +36,10 @@ export default function Contato({ navegar }) {
     setForm(VAZIO)
   }
 
-  const whatsapp = contato?.whatsapp ?? null
-  const linkFalar = whatsapp ? linkWhatsapp(whatsapp, 'Olá, gostaria de falar com a equipe.') : null
-
   return (
     <LayoutPublico navegar={navegar} paginaAtiva="contato">
       <section className="pagina-contato">
         <h1>Fale conosco</h1>
-
-        <div className="contato-info">
-          {linkFalar && (
-            <a className="botao-whatsapp-grande" href={linkFalar} target="_blank" rel="noreferrer">
-              Falar no WhatsApp
-            </a>
-          )}
-          {contato?.email_contato && <a href={`mailto:${contato.email_contato}`}>{contato.email_contato}</a>}
-        </div>
 
         <form className="form-contato" onSubmit={enviar} noValidate>
           <h2>Fale com a nossa equipe</h2>

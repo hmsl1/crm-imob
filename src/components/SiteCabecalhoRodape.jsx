@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { linkInicio, linkVitrine, linkContato } from '../lib/rota.js'
 import { useContatoSite } from '../lib/useContatoSite.js'
 import Marca from './Marca.jsx'
@@ -5,16 +6,37 @@ import Marca from './Marca.jsx'
 // Cabeçalho do site público: "Início", "Imóveis" e "Contato" são páginas; o botão "Anuncie seu
 // imóvel" abre um pop-up (não navega), por isso chama onAnuncie em vez de usar um link.
 export function SiteTopo({ navegar, paginaAtiva = '', onAnuncie }) {
+  const [scrolled, setScrolled] = useState(false)
+  const [menuAberto, setMenuAberto] = useState(false)
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
   const ir = (e, destino) => {
     e.preventDefault()
+    setMenuAberto(false)
     navegar(destino)
   }
   return (
-    <header className="vitrine-topo">
+    <header className={'vitrine-topo' + (scrolled ? ' scrolled' : '')}>
       <a className="marca-link" href={linkInicio} onClick={(e) => ir(e, linkInicio)}>
         <Marca grande />
       </a>
-      <nav className="vitrine-nav">
+      <button
+        type="button"
+        className={'hamburger' + (menuAberto ? ' aberto' : '')}
+        onClick={() => setMenuAberto((v) => !v)}
+        aria-label="Abrir menu"
+      >
+        <span />
+        <span />
+        <span />
+      </button>
+      <nav className={'vitrine-nav' + (menuAberto ? ' aberto' : '')}>
         <a href={linkInicio} className={paginaAtiva === 'inicio' ? 'ativo' : ''} onClick={(e) => ir(e, linkInicio)}>
           Início
         </a>
@@ -24,7 +46,7 @@ export function SiteTopo({ navegar, paginaAtiva = '', onAnuncie }) {
         <a href={linkContato} className={paginaAtiva === 'contato' ? 'ativo' : ''} onClick={(e) => ir(e, linkContato)}>
           Contato
         </a>
-        <button type="button" className="botao-anuncie" onClick={onAnuncie}>
+        <button type="button" className="botao-anuncie" onClick={() => { setMenuAberto(false); onAnuncie() }}>
           Anuncie seu imóvel
         </button>
       </nav>

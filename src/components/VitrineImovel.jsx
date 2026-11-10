@@ -178,11 +178,6 @@ export default function VitrineImovel({ codigo, navegar }) {
           </section>
         )}
 
-        {linkFalar && (
-          <a className="botao-whatsapp-grande" href={linkFalar} target="_blank" rel="noreferrer">
-            Falar no WhatsApp sobre este imóvel
-          </a>
-        )}
       </div>
     </LayoutPublico>
   )
