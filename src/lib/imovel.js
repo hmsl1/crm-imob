@@ -172,6 +172,7 @@ export const FORM_VAZIO = {
   endereco: '',
   bairro: '',
   cidade: '',
+  nome_condominio: '',
 
   valor_venda: '',
   valor_aluguel: '',
@@ -179,6 +180,7 @@ export const FORM_VAZIO = {
   valor_iptu: '',
   iptu_periodo: '',
   sem_condominio: false,
+  sem_iptu: false,
   padrao: '',
   aceita_financiamento: '',
   exclusividade: '',
@@ -245,14 +247,16 @@ export function payloadDoForm(f) {
     endereco: texto(f.endereco),
     bairro: texto(f.bairro),
     cidade: texto(f.cidade),
+    nome_condominio: texto(f.nome_condominio),
 
     // valor que não se aplica à finalidade escolhida é descartado
     valor_venda: temVenda(f.finalidade) ? numero(f.valor_venda) : null,
     valor_aluguel: temAluguel(f.finalidade) ? numero(f.valor_aluguel) : null,
     valor_condominio: f.sem_condominio ? null : numero(f.valor_condominio),
-    valor_iptu: numero(f.valor_iptu),
-    iptu_periodo: numero(f.valor_iptu) !== null ? f.iptu_periodo || null : null, // sem valor, sem período
+    valor_iptu: f.sem_iptu ? null : numero(f.valor_iptu),
+    iptu_periodo: !f.sem_iptu && numero(f.valor_iptu) !== null ? f.iptu_periodo || null : null, // sem valor, sem período
     sem_condominio: f.sem_condominio,
+    sem_iptu: f.sem_iptu,
     padrao: f.padrao || null,
     aceita_financiamento: simNao(f.aceita_financiamento),
     exclusividade: simNao(f.exclusividade),
@@ -312,8 +316,8 @@ const REGRAS = [
     mensagem: 'Informe o valor de venda.',
   },
   {
-    chaves: ['valor_iptu', 'iptu_periodo'],
-    ok: (f) => numero(f.valor_iptu) === null || PERIODOS_IPTU.some((p) => p.id === f.iptu_periodo),
+    chaves: ['valor_iptu', 'iptu_periodo', 'sem_iptu'],
+    ok: (f) => f.sem_iptu || numero(f.valor_iptu) === null || PERIODOS_IPTU.some((p) => p.id === f.iptu_periodo),
     mensagem: 'Informe se o IPTU é mensal ou anual.',
   },
   {

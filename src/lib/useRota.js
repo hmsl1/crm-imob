@@ -1,5 +1,6 @@
 // Navegação do site sem recarregar a página (histórico do navegador funciona normalmente: voltar/avançar).
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
+import { useEffect } from 'react'
 import { rotaDoCaminho } from './rota.js'
 
 export function useRota() {
@@ -24,14 +25,6 @@ export function useRota() {
   }, [])
 
   const rota = rotaDoCaminho(local.pathname, local.search)
-
-  // raiz do domínio: troca a URL para /imoveis sem deixar "/" no histórico (substitui, não empilha)
-  useEffect(() => {
-    if (rota.pagina === 'redirecionar') {
-      window.history.replaceState({}, '', rota.destino)
-      setLocal({ pathname: rota.destino, search: '' })
-    }
-  }, [rota.pagina, rota.destino])
 
   return { rota, navegar }
 }

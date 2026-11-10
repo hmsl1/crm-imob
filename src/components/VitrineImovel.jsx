@@ -5,7 +5,7 @@ import { precosDoImovel, moeda, linkWhatsapp } from '../lib/format.js'
 import { mensagemInteresse } from '../lib/vitrine.js'
 import { linkVitrine } from '../lib/rota.js'
 import { useContatoSite } from '../lib/useContatoSite.js'
-import { SiteTopo, SiteRodape } from './SiteCabecalhoRodape.jsx'
+import LayoutPublico from './LayoutPublico.jsx'
 
 const rotulo = (lista, id) => lista.find((i) => i.id === id)?.rotulo ?? id
 const vazio = (v) => v === null || v === undefined || v === ''
@@ -42,16 +42,14 @@ export default function VitrineImovel({ codigo, navegar }) {
 
   if (imovel === null) {
     return (
-      <div className="vitrine">
-        <SiteTopo navegar={navegar} />
+      <LayoutPublico navegar={navegar} paginaAtiva="imovel">
         <div className="vazio-grande">
           <p>Não encontramos o imóvel "{codigo}". Ele pode ter sido vendido/alugado ou o código está incorreto.</p>
           <button className="primario" onClick={() => navegar(linkVitrine)}>
             Ver todos os imóveis
           </button>
         </div>
-        <SiteRodape />
-      </div>
+      </LayoutPublico>
     )
   }
 
@@ -78,15 +76,13 @@ export default function VitrineImovel({ codigo, navegar }) {
     !vazio(imovel.padrao) && ['Padrão', rotulo(PADROES, imovel.padrao)],
     imovel.aceita_financiamento && ['Aceita financiamento', 'Sim'],
     !imovel.sem_condominio && !vazio(imovel.valor_condominio) && ['Condomínio', `${moeda(imovel.valor_condominio)} /mês`],
-    !vazio(imovel.valor_iptu) && ['IPTU', moeda(imovel.valor_iptu) + sufixoIptu(imovel.iptu_periodo)],
+    !imovel.sem_iptu && !vazio(imovel.valor_iptu) && ['IPTU', moeda(imovel.valor_iptu) + sufixoIptu(imovel.iptu_periodo)],
   ].filter(Boolean)
 
   const marcados = (lista, coluna) => lista.filter((item) => (imovel[coluna] ?? []).includes(item.id))
 
   return (
-    <div className="vitrine">
-      <SiteTopo navegar={navegar} />
-
+    <LayoutPublico navegar={navegar} paginaAtiva="imovel">
       <div className="vitrine-imovel">
         <button type="button" className="link voltar" onClick={() => navegar(linkVitrine)}>
           ← Ver todos os imóveis
@@ -113,7 +109,7 @@ export default function VitrineImovel({ codigo, navegar }) {
           <div>
             <span className="codigo-imovel">{imovel.codigo}</span>
             <h1>{imovel.titulo}</h1>
-            <p className="suave">{[rotulo(TIPOS_IMOVEL, imovel.tipo), imovel.bairro, imovel.cidade].filter(Boolean).join(' · ')}</p>
+            <p className="suave">{[rotulo(TIPOS_IMOVEL, imovel.tipo), imovel.nome_condominio, imovel.bairro, imovel.cidade].filter(Boolean).join(' · ')}</p>
           </div>
           <div className="precos-vitrine">
             {precos.length === 0 ? <span className="valor">Consulte o valor</span> : precos.map((p) => (
@@ -188,8 +184,6 @@ export default function VitrineImovel({ codigo, navegar }) {
           </a>
         )}
       </div>
-
-      <SiteRodape />
-    </div>
+    </LayoutPublico>
   )
 }

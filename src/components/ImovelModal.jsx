@@ -73,6 +73,7 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
   const [recuperadoEm, setRecuperadoEm] = useState(rascunho?.salvoEm ?? null)
   const [salvoAutoEm, setSalvoAutoEm] = useState(null)
   const [arrastandoFoto, setArrastandoFoto] = useState(null)
+  const [arrastandoArquivo, setArrastandoArquivo] = useState(false)
   const [alvoFoto, setAlvoFoto] = useState(null)
   const [novas, setNovas] = useState(rascunho?.novas ?? []) // enviadas e ainda não salvas no imóvel
   const [enviando, setEnviando] = useState(false)
@@ -194,6 +195,18 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
   async function adicionarFotos(e) {
     const arquivos = [...e.target.files]
     e.target.value = ''
+    await processarArquivos(arquivos)
+  }
+
+  // Soltar arquivos arrastados do computador direto na área de fotos (mesma regra do botão "+ Adicionar fotos")
+  function soltarArquivos(e) {
+    e.preventDefault()
+    setArrastandoArquivo(false)
+    const arquivos = [...e.dataTransfer.files].filter((a) => a.type.startsWith('image/'))
+    if (arquivos.length > 0) processarArquivos(arquivos)
+  }
+
+  async function processarArquivos(arquivos) {
     if (arquivos.length === 0) return
 
     const vagas = MAX_FOTOS - fotos.length
@@ -451,6 +464,10 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
                   </label>
                 </div>
                 <label>
+                  Condomínio (opcional)
+                  <input {...texto('nome_condominio')} placeholder="Ex.: Porto Seguro" />
+                </label>
+                <label>
                   Data de captação
                   <input type="date" {...texto('captado_em')} max={hojeISO()} />
                 </label>
@@ -500,11 +517,18 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
                   </label>
                   <label>
                     IPTU (R$)
-                    <input type="number" inputMode="decimal" min="0" step="0.01" {...texto('valor_iptu')} />
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="0.01"
+                      {...texto('valor_iptu')}
+                      disabled={form.sem_iptu}
+                    />
                   </label>
                   <label>
                     IPTU: valor
-                    <select {...texto('iptu_periodo')}>
+                    <select {...texto('iptu_periodo')} disabled={form.sem_iptu}>
                       <Opcoes lista={PERIODOS_IPTU} vazio="Selecione" />
                     </select>
                   </label>
@@ -512,6 +536,10 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
                 <label className="check">
                   <input type="checkbox" {...marca('sem_condominio')} />
                   Imóvel sem condomínio
+                </label>
+                <label className="check">
+                  <input type="checkbox" {...marca('sem_iptu')} />
+                  Imóvel sem IPTU
                 </label>
                 <div className="tres">
                   <label>
@@ -655,9 +683,18 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
 
           {aba === 'fotos' && (
             <>
-              <div className="fotos">
+              <div
+                className={'fotos' + (arrastandoArquivo ? ' arrastando-arquivo' : '')}
+                onDragOver={(e) => {
+                  if (!e.dataTransfer.types.includes('Files')) return
+                  e.preventDefault()
+                  setArrastandoArquivo(true)
+                }}
+                onDragLeave={() => setArrastandoArquivo(false)}
+                onDrop={soltarArquivos}
+              >
                 <span className="rotulo-fotos">
-                  Fotos ({fotos.length}/{MAX_FOTOS}). A primeira é a capa. Arraste ou use as setas para reordenar
+                  Fotos ({fotos.length}/{MAX_FOTOS}). A primeira é a capa. Arraste fotos do computador para cá, ou arraste as miniaturas para reordenar
                 </span>
                 {fotos.length > 0 && (
                   <div className="fotos-grade">

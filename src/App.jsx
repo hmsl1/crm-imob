@@ -6,9 +6,10 @@ import AreaLogada from './components/AreaLogada.jsx'
 import NovaSenha from './components/NovaSenha.jsx'
 import { abriuPorRecuperacao } from './lib/senha.js'
 import { useRota } from './lib/useRota.js'
+import Inicio from './components/Inicio.jsx'
 import Vitrine from './components/Vitrine.jsx'
 import VitrineImovel from './components/VitrineImovel.jsx'
-import Anuncie from './components/Anuncie.jsx'
+import Contato from './components/Contato.jsx'
 
 export default function App() {
   const { rota, navegar } = useRota()
@@ -67,10 +68,11 @@ export default function App() {
 
   // Site público: aberto a qualquer visitante, sem login
   if (rota.pagina !== 'painel') {
-    if (rota.pagina === 'redirecionar') return null // a troca de URL é instantânea (useRota já faz o replace)
     if (rota.pagina === 'imovel') return <VitrineImovel codigo={rota.codigo} navegar={navegar} />
-    if (rota.pagina === 'anuncie') return <Anuncie navegar={navegar} />
-    return <Vitrine navegar={navegar} finalidadeInicial={rota.finalidade} />
+    if (rota.pagina === 'contato') return <Contato navegar={navegar} />
+    // a key força recriar o estado dos filtros quando a URL da busca muda (ex.: veio de "Imóveis por bairro")
+    if (rota.pagina === 'vitrine') return <Vitrine key={JSON.stringify(rota.filtros)} navegar={navegar} filtrosIniciais={rota.filtros} />
+    return <Inicio navegar={navegar} />
   }
 
   if (carregando) return <div className="centro">Carregando…</div>

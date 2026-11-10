@@ -9,7 +9,7 @@ CRM para corretor individual: funil kanban de leads, histórico de interações 
 1. Crie um projeto grátis em [supabase.com](https://supabase.com).
 2. No **SQL Editor**, cole e execute o arquivo `supabase/schema.sql` inteiro, uma vez. Ele cria tudo (leads, imóveis com fotos e captador, agenda, metas e funil do Dashboard) e pode ser repetido sem erro.
 
-> **Já tem um banco em uso?** Não use o `schema.sql` para atualizar: rode só os arquivos novos de `supabase/migrations/`. As migrações 008, 009, 010, 011, 012 e 013 (rodar nesta ordem) ficam ali apenas para quem ainda estava na versão anterior; depois de executadas podem ser apagadas do repositório.
+> **Já tem um banco em uso?** Não use o `schema.sql` para atualizar: rode só os arquivos novos de `supabase/migrations/`. As migrações 008 a 015 (rodar nesta ordem) ficam ali apenas para quem ainda estava na versão anterior; depois de executadas podem ser apagadas do repositório.
 
 3. Em **Project Settings → API**, copie a URL e a chave `anon`.
 4. Neste projeto:
@@ -20,23 +20,25 @@ npm install
 npm run dev
 ```
 
-5. Abra o endereço mostrado em `/painel` (ex.: `http://localhost:5173/painel`), clique em **Primeiro acesso? Criar conta** e confirme o e-mail. O site público (sem login) fica em `/imoveis`; a raiz do domínio (`/`) apenas redireciona para lá.
+5. Abra o endereço mostrado em `/painel` (ex.: `http://localhost:5173/painel`), clique em **Primeiro acesso? Criar conta** e confirme o e-mail. O site público (sem login) começa na raiz do domínio (`/`, a **Início**); a listagem completa fica em `/imoveis`.
 
 > Para uso de uma pessoa só, depois de criar sua conta desative novos cadastros em
 > Supabase → Authentication → Providers → Email → *Allow new users to sign up*.
 
 ## Publicar (grátis)
 
-Cloudflare Pages ou Netlify: conecte o repositório, comando de build `npm run build`, pasta de saída `dist`, e cadastre as duas variáveis `VITE_SUPABASE_*` no painel. O arquivo `public/_redirects` já manda qualquer endereço (inclusive `/imoveis/CA0001`) para `index.html`, para o site funcionar certo ao recarregar a página ou abrir um link direto.
+**Cloudflare**: conecte o repositório, comando de build `npm run build`, pasta de saída `dist`, e cadastre as duas variáveis `VITE_SUPABASE_*` no painel. O arquivo `wrangler.jsonc` na raiz já configura o fallback de SPA (`not_found_handling: single-page-application`), para o site funcionar certo ao recarregar a página ou abrir um link direto (ex.: `/imoveis/CA0001`). Não use um arquivo `public/_redirects` com `/* /index.html 200` nesse tipo de deploy (Cloudflare Workers/Pages unificado) — ele entra em loop infinito com o tratamento de assets do Cloudflare e o deploy falha com "Infinite loop detected".
+
+**Netlify**: mesmo comando de build e pasta de saída; nesse caso sim é preciso um `public/_redirects` com `/*  /index.html  200` (o `wrangler.jsonc` é ignorado fora do Cloudflare).
 **Não use Vercel Hobby** para uso profissional (o plano é só para uso não comercial).
 
-> O CRM (login) fica em `/painel`; o site público fica em `/imoveis` (a raiz do domínio só redireciona para lá). Em Supabase → Authentication → URL Configuration, cadastre o **Site URL** como o domínio raiz (ex.: `https://crzimoveis.com.br`) — o link de "esqueci minha senha" funciona em qualquer caminho.
+> O CRM (login) fica em `/painel`; o site público começa na raiz do domínio (`/`, a Início) e a listagem completa fica em `/imoveis`. Em Supabase → Authentication → URL Configuration, cadastre o **Site URL** como o domínio raiz (ex.: `https://crzimoveis.com.br`) — o link de "esqueci minha senha" funciona em qualquer caminho.
 
 ## O que já funciona (passo 1)
 
 - **Dashboard** (aba "Dashboard"): funil de metas do mês — Captações, Novos clientes, Visitas, Propostas e Fechamentos, com realizado/meta, % da meta e o funil desenhado ao lado. Troca de mês nas setas e alterna entre "Imobiliária" (soma de todos os corretores) e "Só meus"
   - A setinha no título troca entre **Metas de Venda** e **Metas de Locação**, cada uma com seus números e metas. Imóvel "venda e aluguel" conta nos dois; leads sem finalidade de busca e sem tipo de fechamento contam em Venda
-  - Captações = imóveis cadastrados no mês; Novos clientes = leads cadastrados; Visitas = visitas marcadas como realizadas; Propostas/Fechamentos = leads que entraram nessas etapas no mês
+  - Captações = imóveis cadastrados no mês; Novos clientes = leads cadastrados; Visitas = visitas marcadas como realizadas; Propostas = leads que entraram em proposta no mês; **Fechamentos = leads cuja data de fechamento (a que você informa ao fechar) cai no mês**, não a data em que você mexeu no sistema
   - **Metas**: só o e-mail `negociosimobiliarioscrz@gmail.com` define as metas (travado no banco por RLS, não só na tela); os demais usuários só acompanham. Mantenha a confirmação de e-mail ligada no Supabase e crie essa conta primeiro
   - O funil da imobiliária usa uma função que devolve apenas contagens, sem expor leads ou imóveis de outros corretores
 - **Regras de etapa**: ao mover um lead para **Perdido** o motivo é obrigatório (preço, comprou com outro, desistiu, sem retorno, sem crédito, perfil incompatível ou outro + texto); para **Fechado** são obrigatórios imóvel, valor final, data e comissão estimada (com sugestão de 6% na venda ou 1 aluguel). Vale no quadro (janela ao arrastar), no cadastro do lead e no banco (gatilho), só no momento de entrar na etapa — leads antigos continuam editáveis
@@ -69,6 +71,9 @@ Cloudflare Pages ou Netlify: conecte o repositório, comando de build `npm run b
   - Na edição de um campo só valem as obrigatoriedades relacionadas a ele, então um imóvel antigo sem proprietário continua editável nos demais campos
   - Galeria de fotos com setas e miniaturas; "Gerenciar fotos" e "Editar" abrem o formulário completo, que ao salvar volta para os detalhes
 - Cadastro de imóveis em 4 abas (proprietário e valores, detalhes, características, fotos e comentários)
+  - "Imóvel sem condomínio" e "Imóvel sem IPTU": desmarca a obrigatoriedade e esconde os campos de valor/período
+  - **Condomínio** (nome do empreendimento, ex.: "Porto Seguro"): campo de texto opcional, separado do valor mensal do condomínio; aparece na busca e nos cards do site público
+  - Fotos: arraste as miniaturas para reordenar (a primeira é a capa) ou arraste arquivos de imagem direto do computador para a área de fotos para adicioná-las, além do botão "+ Adicionar fotos"
   - Finalidade: venda, aluguel ou venda e aluguel (com os dois valores)
   - Obrigatórios: nome do proprietário, ao menos um telefone e o(s) valor(es); todo o resto é opcional
   - Captador (padrão: o usuário logado; já aceita outros captadores)
@@ -77,7 +82,14 @@ Cloudflare Pages ou Netlify: conecte o repositório, comando de build `npm run b
 - Fotos dos imóveis (até 40 por imóvel, com escolha da capa), comprimidas no navegador antes do envio
   - Reordenar arrastando ou pelas setas; a primeira foto é a capa
 - **Esqueci minha senha** na tela de entrada (link por e-mail) e **Alterar senha** em "Meu perfil" (pede a senha atual; nova senha com 8+ caracteres, letras e números). Para o link funcionar, no Supabase cadastre o endereço do site em Authentication → URL Configuration (Site URL e Redirect URLs)
-- **Site público (vitrine)**, em `/imoveis` (o CRM fica em `/painel`; a raiz do domínio só redireciona para `/imoveis`). O menu superior tem só **Comprar** e **Alugar** — ao clicar, filtram a mesma lista (por `?f=venda` ou `?f=aluguel` na URL) sem trocar de página — e o botão especial **Anuncie**, que leva a uma página dedicada (`/anuncie`) com um formulário para o proprietário deixar nome, WhatsApp e dados do imóvel que quer anunciar (fica salvo em `anuncios_recebidos`, visível só para o time). A lista mostra os imóveis **disponíveis** marcados para aparecer no site ("Mostrar no site" no cadastro), com busca por código, título ou bairro e filtros por tipo/bairro. A página de cada imóvel (`/imoveis/CA0001`) mostra fotos, características e um botão **Falar no WhatsApp sobre este imóvel**, que abre a conversa já com "Olá, tenho interesse no imóvel CA0001 (título)". O rodapé mostra o responsável (**Wallace Cruz**, CRECI **108.111**) e o e-mail de contato (`negociosimobiliarioscrz@gmail.com`) — sem endereço físico, que a imobiliária ainda não tem. O número de WhatsApp e os dados do responsável (nome, CRECI, e-mail) são editáveis em "Meu perfil" → "Dados do site", só pelo dono da imobiliária. Nunca mostra dados do proprietário, endereço exato, localização ou chave — só o que o cliente precisa ver. Nenhum dado passa pelo login: o visitante lê só views públicas do banco
+- **Site público (vitrine)**, reformulado seguindo o modelo do site seuimoveljr.com.br (o CRM fica em `/painel`). Menu superior: **Início** (`/`), **Imóveis** (`/imoveis`) e **Contato** (`/contato`), mais o botão **Anuncie seu imóvel**, que agora é um **pop-up** (não uma página) com Nome, Telefone e "Sobre o imóvel" (opcional) — fica salvo em `anuncios_recebidos`, visível só para o time
+  - **Início**: imagem de capa (grande, cheia de largura) com uma frase de efeito por baixo, a barra de busca, **Imóveis selecionados** (os mais recentes), **Imóveis por bairro** (contagem e uma foto por bairro) e, só quando preenchidos em "Meu perfil" → "Dados do site": **Vídeos** (YouTube), **O que dizem sobre nós** (depoimentos — cadastre pela tabela `depoimentos` no Supabase, ainda sem tela própria), **Sobre nós** e a faixa do Instagram. Nenhuma dessas seções mostra conteúdo inventado: elas só aparecem quando há conteúdo real
+  - **Imóveis**: a listagem completa, com busca por código/título/bairro/condomínio e filtros por finalidade, tipo, cidade, bairro, condomínio e faixa de valor. Mostra os imóveis **disponíveis** marcados para aparecer no site ("Mostrar no site" no cadastro). Cada card mostra tipo, condomínio (quando houver), bairro/cidade, um resumo de dormitórios/suítes/banheiros/vagas/área e "Ver detalhes"
+  - **Contato**: botão de WhatsApp, e-mail e um formulário de contato geral ("o que você procura"), salvo em `contatos_recebidos` — diferente do "Anuncie seu imóvel", que é para quem quer vender/alugar com a imobiliária
+  - A página de cada imóvel (`/imoveis/CA0001`) mostra fotos, condomínio, características e um botão **Falar no WhatsApp sobre este imóvel**, que abre a conversa já com "Olá, tenho interesse no imóvel CA0001 (título)"
+  - O rodapé mostra o responsável (**Wallace Cruz**, CRECI **108.111**) e o e-mail de contato (`negociosimobiliarioscrz@gmail.com`) — sem endereço físico, que a imobiliária ainda não tem
+  - Tudo editável em "Meu perfil" → "Dados do site" (só o dono): WhatsApp, nome/CRECI/e-mail do responsável, imagem de capa (upload direto), frase de efeito, sobre a empresa, Instagram e vídeos do YouTube
+  - Nunca mostra dados do proprietário, endereço exato, localização ou chave — só o que o cliente precisa ver. Nenhum dado passa pelo login: o visitante lê só views públicas do banco
 - **Código do imóvel por tipo**: `CA0001` (casa), `AP0001` (apartamento), `LO0001` (comercial/loja), `TE0001` (terreno), `RU0001` (rural), `OU0001` (outro) — cada tipo com sua própria contagem. Nunca muda depois de criado; imóveis antigos (código `CRZ-0001`...) foram renumerados pelo tipo, na ordem de cadastro, pela migração 012
 - Filtro por bairro na lista de imóveis (junta "centro", "Centro" e "CENTRO" e mostra a quantidade de cada bairro)
 - Troca de página e de abas com fade suave, no mesmo estilo das janelas (respeita a preferência de reduzir movimento do sistema)

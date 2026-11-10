@@ -59,6 +59,7 @@ export const CAMPOS_POR_ABA = {
         campo('endereco', 'Endereço', 'texto', { mapa: true }),
         campo('bairro', 'Bairro', 'texto'),
         campo('cidade', 'Cidade', 'texto'),
+        campo('nome_condominio', 'Condomínio', 'texto'),
         campo('captador_id', 'Captador', 'corretor'),
         campo('captado_em', 'Data de captação', 'data'),
       ],
@@ -70,7 +71,7 @@ export const CAMPOS_POR_ABA = {
         campo('valor_venda', 'Valor de venda', 'moeda', { visivel: (i) => temVenda(i.finalidade) }),
         campo('valor_aluguel', 'Valor do aluguel', 'moeda', { sufixo: ' /mês', visivel: (i) => temAluguel(i.finalidade) }),
         campo('condominio', 'Condomínio', 'condominio', { chaves: ['sem_condominio', 'valor_condominio'] }),
-        campo('valor_iptu', 'IPTU', 'iptu', { chaves: ['valor_iptu', 'iptu_periodo'] }),
+        campo('valor_iptu', 'IPTU', 'iptu', { chaves: ['valor_iptu', 'iptu_periodo', 'sem_iptu'] }),
         campo('padrao', 'Padrão do imóvel', 'select', { opcoes: PADROES, ...SELECT_OPCIONAL }),
         campo('aceita_financiamento', 'Aceita financiamento', 'simnao'),
         campo('exclusividade', 'Exclusividade', 'exclusividade', { chaves: ['exclusividade', 'exclusividade_ate'] }),
@@ -137,6 +138,7 @@ export function exibirCampo(c, i, ctx = {}) {
     case 'moeda':
       return vazio(v) ? null : moeda(v) + (c.sufixo ?? '')
     case 'iptu':
+      if (i.sem_iptu) return 'Sem IPTU'
       return vazio(v) ? null : moeda(v) + sufixoIptu(i.iptu_periodo)
     case 'm2':
       return vazio(v) ? null : `${Number(v)} m²`
