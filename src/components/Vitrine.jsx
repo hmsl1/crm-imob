@@ -81,6 +81,7 @@ export default function Vitrine({ navegar, filtrosIniciais = {} }) {
                 onKeyDown={(e) => e.key === 'Enter' && abrir(i.codigo)}
               >
                 <div className="foto">
+                  {i.nome_condominio && <span className="selo-condominio">{i.nome_condominio}</span>}
                   {i.foto_capa ? (
                     <img src={i.foto_capa} alt={i.titulo} loading="lazy" decoding="async" />
                   ) : (

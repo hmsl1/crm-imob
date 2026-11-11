@@ -20,6 +20,14 @@ export function linkWhatsappSemNumero(texto) {
   return `https://wa.me/?text=${encodeURIComponent(texto)}`
 }
 
+// "(22) 99259-2683" a partir de qualquer formato guardado (sempre tira o 55 do Brasil na frente)
+export function telefoneExibicao(telefone) {
+  const d = digitosWhatsapp(telefone).replace(/^55/, '')
+  if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
+  if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`
+  return telefone
+}
+
 export function moeda(valor) {
   if (valor === null || valor === undefined || valor === '') return '—'
   const numero = Number(valor)

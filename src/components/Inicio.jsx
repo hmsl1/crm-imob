@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { linkImovel, linkVitrine, linkBuscaImoveis } from '../lib/rota.js'
 import { chaveBairro } from '../lib/bairros.js'
-import { precosDoImovel, linkWhatsapp } from '../lib/format.js'
+import { precosDoImovel, linkWhatsapp, telefoneExibicao } from '../lib/format.js'
 import { idsDeVideos } from '../lib/videosSite.js'
 import { useContatoSite } from '../lib/useContatoSite.js'
 import BuscaImoveis from './BuscaImoveis.jsx'
@@ -50,11 +50,47 @@ export default function Inicio({ navegar }) {
   const whatsapp = contato?.whatsapp ?? null
   const linkFalarEquipe = whatsapp ? linkWhatsapp(whatsapp, 'Olá, não encontrei o que eu procurava no site. Pode me ajudar?') : null
 
+  const abas = [
+    { id: '', rotulo: 'Todos' },
+    { id: 'venda', rotulo: 'Comprar' },
+    { id: 'aluguel', rotulo: 'Alugar' },
+  ]
+
   return (
     <LayoutPublico navegar={navegar} paginaAtiva="inicio">
       <section className="hero-inicio" style={contato?.hero_imagem_url ? { backgroundImage: `url(${contato.hero_imagem_url})` } : undefined}>
         <div className="hero-conteudo">
           <h1>{contato?.tagline_site || TAGLINE_PADRAO}</h1>
+          <div className="hero-cta">
+            <button type="button" className="cta-primario" onClick={() => navegar(linkBuscaImoveis({ finalidade: 'venda' }))}>
+              Imóveis à venda
+            </button>
+            <button type="button" className="cta-secundario" onClick={() => navegar(linkBuscaImoveis({ finalidade: 'aluguel' }))}>
+              Alugar
+            </button>
+            {linkFalarEquipe && (
+              <a className="cta-contorno" href={linkFalarEquipe} target="_blank" rel="noreferrer">
+                Falar conosco
+              </a>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <div className="busca-flutuante-wrap">
+        <div className="busca-flutuante">
+          <div className="busca-abas">
+            {abas.map((a) => (
+              <button
+                key={a.id}
+                type="button"
+                className={filtros.finalidade === a.id ? 'ativa' : ''}
+                onClick={() => setFiltros((f) => ({ ...f, finalidade: a.id }))}
+              >
+                {a.rotulo}
+              </button>
+            ))}
+          </div>
           <BuscaImoveis
             imoveis={imoveis}
             valores={filtros}
@@ -62,7 +98,7 @@ export default function Inicio({ navegar }) {
             aoBuscar={() => navegar(linkBuscaImoveis(filtros))}
           />
         </div>
-      </section>
+      </div>
 
       {destaques.length > 0 && (
         <section className="secao-vitrine">
@@ -78,9 +114,12 @@ export default function Inicio({ navegar }) {
               return (
                 <article key={i.id} className="imovel" onClick={() => navegar(linkImovel(i.codigo))}>
                   <div className="foto">
+                    {i.nome_condominio && <span className="selo-condominio">{i.nome_condominio}</span>}
                     {i.foto_capa ? <img src={i.foto_capa} alt={i.titulo} loading="lazy" decoding="async" /> : <span>Sem foto</span>}
+                    {i.total_fotos > 1 && <span className="selo-fotos">{i.total_fotos} fotos</span>}
                   </div>
                   <div className="corpo">
+                    <span className="codigo-imovel">{i.codigo}</span>
                     {precos.length === 0 ? (
                       <span className="preco">
                         <small>Consulte o valor</small>
