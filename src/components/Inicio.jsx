@@ -1,12 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { linkImovel, linkVitrine, linkBuscaImoveis } from '../lib/rota.js'
 import { chaveBairro } from '../lib/bairros.js'
 import { precosDoImovel, linkWhatsapp, telefoneExibicao } from '../lib/format.js'
 import { idsDeVideos } from '../lib/videosSite.js'
 import { useContatoSite } from '../lib/useContatoSite.js'
+import { CaracteristicasImovel } from './IconesImovel.jsx'
 import BuscaImoveis from './BuscaImoveis.jsx'
 import LayoutPublico from './LayoutPublico.jsx'
+import ImovelStories from './ImovelStories.jsx'
 
 const FILTROS_VAZIOS = { busca: '', tipo: '', finalidade: '', cidade: '', bairro: '', condominio: '', valorMin: '', valorMax: '' }
 const TAGLINE_PADRAO = 'O imóvel certo, do jeito certo.'
@@ -19,6 +21,8 @@ export default function Inicio({ navegar }) {
   const [bairros, setBairros] = useState([])
   const [depoimentos, setDepoimentos] = useState([])
   const [filtros, setFiltros] = useState(FILTROS_VAZIOS)
+  const [storyAberto, setStoryAberto] = useState(null) // código do imóvel aberto no pop-up de stories
+  const trilhaRef = useRef(null)
   const contato = useContatoSite()
 
   useEffect(() => {
@@ -101,6 +105,36 @@ export default function Inicio({ navegar }) {
       </div>
 
       {destaques.length > 0 && (
+        <section className="secao-vitrine secao-destaques">
+          <div className="titulo-secao">
+            <span className="rotulo-destaques">Destaques</span>
+          </div>
+          <div className="destaques-trilha-wrap">
+            <button type="button" className="destaques-seta esq" aria-label="Voltar" onClick={() => trilhaRef.current?.scrollBy({ left: -240, behavior: 'smooth' })}>‹</button>
+            <div className="destaques-trilha" ref={trilhaRef}>
+              {destaques.map((i) => {
+                const precos = precosDoImovel(i)
+                return (
+                  <button type="button" key={i.id} className="destaque-item" onClick={() => setStoryAberto(i.codigo)}>
+                    <span className="destaque-avatar">
+                      {i.foto_capa ? <img src={i.foto_capa} alt={i.titulo} loading="lazy" /> : <span className="sem-foto" />}
+                      {precos[0] && <span className="destaque-preco">{precos[0].texto}</span>}
+                    </span>
+                    <span className="destaque-bairro">{i.bairro || i.titulo}</span>
+                  </button>
+                )
+              })}
+            </div>
+            <button type="button" className="destaques-seta dir" aria-label="Avançar" onClick={() => trilhaRef.current?.scrollBy({ left: 240, behavior: 'smooth' })}>›</button>
+          </div>
+        </section>
+      )}
+
+      {storyAberto && (
+        <ImovelStories codigo={storyAberto} navegar={navegar} linkImovel={linkImovel} aoFechar={() => setStoryAberto(null)} />
+      )}
+
+      {destaques.length > 0 && (
         <section className="secao-vitrine">
           <div className="titulo-secao">
             <h2>Imóveis selecionados</h2>
@@ -120,21 +154,25 @@ export default function Inicio({ navegar }) {
                   </div>
                   <div className="corpo">
                     <span className="codigo-imovel">{i.codigo}</span>
-                    {precos.length === 0 ? (
-                      <span className="preco">
-                        <small>Consulte o valor</small>
-                      </span>
-                    ) : (
-                      precos.map((p) => (
-                        <span className="preco" key={p.id}>
-                          {precos.length > 1 && <small>{p.rotulo} </small>}
-                          {p.texto}
-                        </span>
-                      ))
-                    )}
                     <strong>{i.titulo}</strong>
                     <span className="detalhes">{[i.bairro, i.cidade].filter(Boolean).join(' · ')}</span>
-                    <span className="link ver-detalhes">Ver detalhes →</span>
+                    <CaracteristicasImovel imovel={i} />
+                    <div className="corpo-divisoria" />
+                    <div className="corpo-rodape">
+                      {precos.length === 0 ? (
+                        <span className="preco">
+                          <small>Consulte o valor</small>
+                        </span>
+                      ) : (
+                        precos.map((p) => (
+                          <span className="preco" key={p.id}>
+                            {precos.length > 1 && <small>{p.rotulo} </small>}
+                            {p.texto}
+                          </span>
+                        ))
+                      )}
+                      <span className="link ver-detalhes">Ver detalhes →</span>
+                    </div>
                   </div>
                 </article>
               )

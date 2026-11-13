@@ -5,6 +5,7 @@ import { precosDoImovel } from '../lib/format.js'
 import { atendeBairro } from '../lib/bairros.js'
 import { filtrarVitrine, buscaEhCodigo } from '../lib/vitrine.js'
 import { linkImovel } from '../lib/rota.js'
+import { CaracteristicasImovel } from './IconesImovel.jsx'
 import BuscaImoveis from './BuscaImoveis.jsx'
 import LayoutPublico from './LayoutPublico.jsx'
 
@@ -90,31 +91,28 @@ export default function Vitrine({ navegar, filtrosIniciais = {} }) {
                   {i.total_fotos > 1 && <span className="selo-fotos">{i.total_fotos} fotos</span>}
                 </div>
                 <div className="corpo">
-                  {precos.length === 0 ? (
-                    <span className="preco">
-                      <small>Consulte o valor</small>
-                    </span>
-                  ) : (
-                    precos.map((p) => (
-                      <span className="preco" key={p.id}>
-                        {precos.length > 1 && <small>{p.rotulo} </small>}
-                        {p.texto}
-                      </span>
-                    ))
-                  )}
                   <span className="codigo-imovel">{i.codigo}</span>
                   <strong>{i.titulo}</strong>
                   <span className="detalhes">
                     {[rotulo(TIPOS_IMOVEL, i.tipo), i.nome_condominio, i.bairro, i.cidade].filter(Boolean).join(' · ')}
                   </span>
-                  <ul className="lista-caracteristicas">
-                    {i.dormitorios != null && <li>{i.dormitorios} {i.dormitorios === 1 ? 'dormitório' : 'dormitórios'}</li>}
-                    {i.suites != null && i.suites > 0 && <li>{i.suites} {i.suites === 1 ? 'suíte' : 'suítes'}</li>}
-                    {i.banheiros != null && <li>{i.banheiros} {i.banheiros === 1 ? 'banheiro' : 'banheiros'}</li>}
-                    {(i.vagas_cobertas || i.vagas_descobertas) ? <li>{(i.vagas_cobertas ?? 0) + (i.vagas_descobertas ?? 0)} vagas</li> : null}
-                    {i.area_construida != null && <li>{Number(i.area_construida)} m²</li>}
-                  </ul>
-                  <span className="link ver-detalhes">Ver detalhes →</span>
+                  <CaracteristicasImovel imovel={i} />
+                  <div className="corpo-divisoria" />
+                  <div className="corpo-rodape">
+                    {precos.length === 0 ? (
+                      <span className="preco">
+                        <small>Consulte o valor</small>
+                      </span>
+                    ) : (
+                      precos.map((p) => (
+                        <span className="preco" key={p.id}>
+                          {precos.length > 1 && <small>{p.rotulo} </small>}
+                          {p.texto}
+                        </span>
+                      ))
+                    )}
+                    <span className="link ver-detalhes">Ver detalhes →</span>
+                  </div>
                 </div>
               </article>
             )
