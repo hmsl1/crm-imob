@@ -12,6 +12,8 @@ import ImovelStories from './ImovelStories.jsx'
 
 const FILTROS_VAZIOS = { busca: '', tipo: '', finalidade: '', cidade: '', bairro: '', condominio: '', valorMin: '', valorMax: '' }
 const TAGLINE_PADRAO = 'O imóvel certo, do jeito certo.'
+// Banner padrão do topo, usado enquanto não houver uma imagem cadastrada em "hero_imagem_url".
+const BANNER_PADRAO = '/banner-hero.jpg'
 
 // Página inicial do site público: a "vitrine" propriamente dita — capa, busca, destaques,
 // imóveis por bairro e as seções que só aparecem quando o dono preenche o conteúdo (Sobre,
@@ -62,7 +64,7 @@ export default function Inicio({ navegar }) {
 
   return (
     <LayoutPublico navegar={navegar} paginaAtiva="inicio">
-      <section className="hero-inicio" style={contato?.hero_imagem_url ? { backgroundImage: `url(${contato.hero_imagem_url})` } : undefined}>
+      <section className="hero-inicio" style={{ backgroundImage: `url(${contato?.hero_imagem_url || BANNER_PADRAO})` }}>
         <div className="hero-conteudo">
           <h1>{contato?.tagline_site || TAGLINE_PADRAO}</h1>
           <div className="hero-cta">

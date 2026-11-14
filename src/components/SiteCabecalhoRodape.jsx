@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { linkInicio, linkVitrine, linkContato } from '../lib/rota.js'
 import { useContatoSite } from '../lib/useContatoSite.js'
 import { linkWhatsapp, telefoneExibicao } from '../lib/format.js'
+import { MARCA } from '../config.js'
 import Marca from './Marca.jsx'
 
 // Cabeçalho do site público: "Início", "Imóveis" e "Contato" são páginas; o botão "Anuncie seu
@@ -12,7 +13,11 @@ export function SiteTopo({ navegar, paginaAtiva = '', onAnuncie }) {
   const contato = useContatoSite()
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20)
+    // Limites diferentes pra ligar (28px) e desligar (12px): evita entrar/sair do estado
+    // "scrolled" repetidas vezes caso a rolagem fique oscilando bem perto de um único valor.
+    const onScroll = () => {
+      setScrolled((atual) => (window.scrollY > 28 ? true : window.scrollY < 12 ? false : atual))
+    }
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
@@ -83,8 +88,9 @@ export function SiteRodape() {
         </nav>
       </div>
       <div className="rodape-identidade">
+        {MARCA.logo && <img src={MARCA.logo} alt="" className="rodape-selo-logo" />}
         {contato?.nome_responsavel && <strong>{contato.nome_responsavel}</strong>}
-        {contato?.creci && <span>CRECI {contato.creci}</span>}
+        {contato?.creci && <span>CRECI-RJ {contato.creci}</span>}
         {contato?.email_contato && <span>{contato.email_contato}</span>}
         {contato?.instagram_handle && (
           <a href={`https://instagram.com/${contato.instagram_handle.replace(/^@/, '')}`} target="_blank" rel="noreferrer">
