@@ -13,6 +13,8 @@ import {
 } from '../lib/proprietario.js'
 import { useFechamentoAnimado } from '../lib/useFechamentoAnimado.js'
 import Topo from './Topo.jsx'
+import { useConfirmar } from '../lib/confirmacao.jsx'
+import { EsqueletoLista } from './Esqueleto.jsx'
 
 // Cadastro de proprietários: um proprietário, vários imóveis. Nome e telefones editados aqui
 // são atualizados pelo banco em todos os imóveis dele.
@@ -55,7 +57,7 @@ export default function Proprietarios({ usuario, pagina, onPagina }) {
       {erro && <p className="erro faixa">{erro}</p>}
 
       {carregando ? (
-        <div className="centro">Carregando proprietários…</div>
+        <EsqueletoLista />
       ) : filtrados.length === 0 ? (
         <div className="vazio-grande">
           <p>{busca ? 'Nenhum proprietário encontrado.' : 'Nenhum proprietário cadastrado ainda. Eles são criados junto com o cadastro do imóvel.'}</p>
@@ -107,6 +109,7 @@ export default function Proprietarios({ usuario, pagina, onPagina }) {
 
 function ProprietarioModal({ proprietario, usuario, todos, imoveis, onFechar, onSalvo }) {
   const { saindo, fechar } = useFechamentoAnimado()
+  const confirmar = useConfirmar()
   const [form, setForm] = useState(() => formDoProprietario(proprietario))
   const [erro, setErro] = useState('')
   const [salvando, setSalvando] = useState(false)
@@ -134,7 +137,8 @@ function ProprietarioModal({ proprietario, usuario, todos, imoveis, onFechar, on
     const aviso = imoveis.length
       ? `Excluir o proprietário "${proprietario.nome}"? Os ${imoveis.length} imóveis dele continuam cadastrados, só perdem o vínculo.`
       : `Excluir o proprietário "${proprietario.nome}"?`
-    if (!window.confirm(aviso)) return
+    const ok = await confirmar({ titulo: 'Excluir proprietário', mensagem: aviso, textoConfirmar: 'Excluir' })
+    if (!ok) return
     const { error } = await supabase.from('proprietarios').delete().eq('id', proprietario.id)
     if (error) return setErro(error.message)
     fechar(onSalvo)

@@ -109,7 +109,24 @@ label.check input { width: auto; }
 .marca.grande h1 { font-size: 1.4rem; }
 .marca.grande .logo { height: 90px; max-width: 280px; }
 .topo .busca { width: 320px; min-width: 140px; flex-shrink: 1; }
-.usuario { color: var(--suave); font-size: 0.85rem; }
+.usuario { color: var(--suave); font-size: 0.85rem; display: inline-flex; align-items: center; gap: 4px; }
+.usuario .seta-usuario { color: var(--suave); }
+
+/* Menu do usuário: agrupa "Editar perfil", "Ver site" e "Sair" atrás do nome, em vez de deixar
+   "Sair" sempre visível e do mesmo peso que o resto da barra (é uma ação rara/irreversível). */
+.menu-usuario { position: relative; }
+.menu-usuario-lista {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 30;
+  background: var(--superficie); border: 1px solid var(--borda); border-radius: 10px;
+  box-shadow: 0 10px 28px -8px rgba(var(--sombra), 0.25); padding: 6px; min-width: 180px;
+  display: flex; flex-direction: column;
+}
+.menu-usuario-lista button, .menu-usuario-lista a {
+  display: block; text-align: left; padding: 10px 12px; border-radius: 7px; color: var(--texto);
+  text-decoration: none; font-size: 0.92rem; background: none; border: none; width: 100%;
+}
+.menu-usuario-lista button:hover, .menu-usuario-lista a:hover { background: var(--bg); }
+.menu-usuario-lista button.sair { color: var(--perigo); }
 
 .quadro { flex: 1; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(250px, 1fr); gap: 12px; padding: 16px; overflow-x: auto; align-items: start; }
 .coluna { background: color-mix(in srgb, var(--borda) 45%, var(--bg)); border-radius: 12px; padding: 10px; min-height: 160px; border: 2px solid transparent; }
@@ -133,6 +150,12 @@ label.check input { width: auto; }
 /* Modal */
 .fundo-modal { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); display: grid; place-items: start center; padding: 24px 12px; overflow-y: auto; z-index: 50; }
 .modal { background: var(--superficie); border-radius: 12px; padding: 20px; width: min(560px, 100%); }
+/* Confirmação (substitui window.confirm): sempre por cima de qualquer outro modal aberto,
+   e centralizada na vertical (é curta, não precisa "nascer" no topo como os modais de formulário) */
+.fundo-confirmacao { z-index: 60; place-items: center; }
+.modal.confirmacao { width: min(420px, 100%); text-align: left; }
+.modal.confirmacao h2 { margin: 0 0 8px; font-size: 1.1rem; }
+.modal.confirmacao p { margin: 0 0 18px; color: var(--suave); }
 .modal-topo { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .duas { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 @media (max-width: 520px) { .duas { grid-template-columns: 1fr; } }
@@ -507,23 +530,50 @@ button, a, select, label, summary { touch-action: manipulation; } /* sem espera 
   .seta { width: 44px; height: 44px; top: calc(50% - 22px); }
   .galeria-miniaturas button { width: 84px; height: 62px; }
   .miniatura .remover, .mover-foto button, .miniatura .tornar-capa { min-height: 32px; min-width: 32px; }
-  .mover-etapa { display: block; width: 100%; margin-top: 4px; font-size: 16px !important; color: var(--suave); }
+  /* Vira um "chip" de ação visível, não um <select> discreto perdido no card — em touch não
+     dá pra arrastar o card, então essa é a única forma de mudar a etapa pelo celular. */
+  .mover-etapa {
+    display: block; width: 100%; margin-top: 6px; font-size: 14px !important; font-weight: 700;
+    color: var(--acento-texto, var(--acento)); background: color-mix(in srgb, var(--acento) 12%, var(--superficie));
+    border: 1px solid color-mix(in srgb, var(--acento) 35%, var(--borda)); border-radius: 999px;
+    padding: 8px 12px; text-align: center; min-height: 40px;
+  }
   .lead { cursor: default; }
 }
 
 @media (max-width: 640px) {
-  /* barra superior em 3 linhas: marca + usuário/sair, menu, ações da página */
+  /* barra superior em 2 linhas: marca + usuário, ações da página. A navegação entre páginas
+     (Dashboard/Leads/Imóveis/Donos/Agenda) sai daqui e vira a barra fixa embaixo (.menu-inferior) */
   .topo { padding: 8px 12px; padding-top: calc(8px + env(safe-area-inset-top)); gap: 8px; flex-wrap: wrap; }
   .marca .logo { height: 44px; max-width: 150px; }
-  .topo .usuario { margin-left: auto; order: 2; }
-  .topo > .link:last-child { order: 2; }
-  .menu { order: 3; width: 100%; margin-left: 0; justify-content: space-between; }
-  .menu { gap: 0; }
-  .menu button { flex: 1 1 auto; min-width: 0; padding-inline: 4px; font-size: 0.8rem; }
-  .acoes-topo { order: 4; width: 100%; margin-left: 0; flex-wrap: wrap; gap: 8px; }
+  .menu-usuario { margin-left: auto; order: 2; }
+  .menu { display: none; }
+  .acoes-topo { order: 3; width: 100%; margin-left: 0; flex-wrap: wrap; gap: 8px; }
   .topo .busca { flex: 1 1 100%; max-width: none; }
   .acoes-topo .primario { flex: 1 1 auto; }
   .selo-agenda { right: 4px; }
+
+  /* barra de navegação fixa embaixo, estilo app nativo */
+  .menu-inferior {
+    display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    background: var(--superficie); border-top: 1px solid var(--borda);
+    padding: 4px 2px calc(4px + env(safe-area-inset-bottom));
+    box-shadow: 0 -2px 12px -4px rgba(var(--sombra), 0.12);
+  }
+  .menu-inferior button {
+    flex: 1 1 0; display: flex; flex-direction: column; align-items: center; gap: 2px;
+    background: none; border: none; color: var(--suave); font-size: 0.66rem; font-weight: 600;
+    padding: 6px 2px; border-radius: 10px; min-height: 48px; position: relative;
+  }
+  .menu-inferior button svg { width: 22px; height: 22px; }
+  .menu-inferior button.ativo { color: var(--acento); }
+  .menu-inferior .selo-agenda {
+    position: absolute; top: 2px; right: calc(50% - 20px); min-width: 16px; height: 16px;
+    border-radius: 999px; background: var(--perigo); color: #fff; font-size: 0.62rem;
+    display: grid; place-items: center; padding: 0 3px;
+  }
+  /* espaço pra barra fixa não tampar o fim do conteúdo */
+  .app { padding-bottom: calc(58px + env(safe-area-inset-bottom)); }
 
   /* quadro de leads: uma coluna por vez, com "ímã" ao rolar */
   .quadro { grid-auto-columns: 86vw; padding: 12px; scroll-snap-type: x mandatory; scroll-padding-inline: 12px; }
@@ -557,6 +607,38 @@ button, a, select, label, summary { touch-action: manipulation; } /* sem espera 
   .nova-nota, .linha-add { flex-wrap: wrap; }
   .aviso-hoje { bottom: calc(12px + env(safe-area-inset-bottom)); }
 }
+
+@media (min-width: 641px) {
+  .menu-inferior { display: none; }
+}
+
+/* Toast de erro: flutua perto da ação, não numa faixa lá no topo da página */
+@keyframes toast-entra { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.toast-erro {
+  position: fixed; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 40; margin: 0 auto; max-width: 480px;
+  display: flex; align-items: center; gap: 10px;
+  background: var(--perigo); color: #fff; border-radius: 10px; padding: 12px 14px;
+  box-shadow: 0 10px 28px -8px rgba(var(--sombra), 0.4);
+  animation: toast-entra 0.2s ease both;
+}
+.toast-erro span { flex: 1; font-size: 0.9rem; }
+.toast-erro button { background: none; border: none; color: #fff; font-size: 1.3rem; line-height: 1; padding: 0 4px; flex-shrink: 0; }
+@media (max-width: 640px) { .toast-erro { bottom: calc(70px + env(safe-area-inset-bottom)); } }
+
+/* Esqueletos de carregamento */
+@keyframes esqueleto-pulso { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+.esqueleto { background: var(--borda); border-radius: 6px; animation: esqueleto-pulso 1.3s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .esqueleto { animation: none; opacity: 0.7; } }
+.esqueleto-titulo-coluna { height: 16px; width: 60%; margin: 2px 4px 12px; }
+.esqueleto-cartao { gap: 8px; cursor: default; }
+.esqueleto-cartao .esqueleto-linha, .esqueleto-cartao-imovel .esqueleto-linha { height: 12px; }
+.esqueleto-grade { pointer-events: none; }
+.esqueleto-cartao-imovel .esqueleto-foto { aspect-ratio: 4 / 3; border-radius: var(--raio) var(--raio) 0 0; }
+.esqueleto-cartao-imovel .corpo { display: flex; flex-direction: column; gap: 8px; padding: 12px; }
+.esqueleto-lista { display: flex; flex-direction: column; gap: 10px; padding: 16px; }
+.esqueleto-linha-lista { display: flex; gap: 16px; align-items: center; background: var(--superficie); border: 1px solid var(--borda); border-radius: 10px; padding: 12px 14px; }
+.esqueleto-linha-lista .esqueleto-linha { height: 12px; }
 
 /* Dashboard: funil de metas */
 .dashboard { width: 100%; max-width: 980px; margin: 0 auto; padding: 20px 16px; }
@@ -599,11 +681,24 @@ button, a, select, label, summary { touch-action: manipulation; } /* sem espera 
   .link-metas { min-height: 44px; }
 }
 .metas-topo h2 { margin: 0; }
-button.titulo-troca { display: inline-flex; align-items: center; gap: 6px; border: none; background: none; padding: 4px 8px 4px 0; margin: 0; font: inherit; color: inherit; cursor: pointer; border-radius: 8px; }
+/* Venda/Locação é a decisão que muda todo o funil — por isso fica com mais peso visual
+   (fundo colorido, tipo "chip") que o mês e o escopo (Imobiliária/Só meus), que são só
+   refinamento da mesma visão e ficam com tratamento mais discreto logo abaixo. */
+button.titulo-troca {
+  display: inline-flex; align-items: center; gap: 6px; border: none; margin: 0; cursor: pointer;
+  font: inherit; font-weight: 700; color: var(--acento-texto);
+  background: color-mix(in srgb, var(--acento-texto) 12%, transparent);
+  padding: 6px 14px 6px 10px; border-radius: 999px;
+}
 button.titulo-troca svg { transition: transform 0.2s ease; color: var(--acento-texto); }
-button.titulo-troca:hover:not(:disabled) { background: none; box-shadow: none; transform: none; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: color-mix(in srgb, var(--acento-texto) 45%, transparent); }
+button.titulo-troca:hover:not(:disabled) { background: color-mix(in srgb, var(--acento-texto) 20%, transparent); box-shadow: none; transform: none; }
 button.titulo-troca:hover svg { transform: translateY(1px); }
 button.titulo-troca:focus-visible { outline: 2px solid var(--acento-texto); outline-offset: 2px; }
+
+/* Controles secundários (mês, escopo): menores e mais discretos que o seletor Venda/Locação */
+.metas-controles { font-size: 0.88rem; }
+.metas-controles .visoes button { height: 34px; padding: 0 11px; font-size: 0.85rem; }
+.metas-controles .seletor-mes { color: var(--suave); font-weight: 500; }
 @media (max-width: 640px) { button.titulo-troca { min-height: 44px; } }
 
 /* Etapas (motivo de perdido / fechamento), código do imóvel e responsável do lead */

@@ -4,6 +4,8 @@ import { LeadModal, EtapaModal } from '../componentesPreguicosos.js'
 import { colunasDaEtapa, textoDoMotivo } from '../lib/etapa.js'
 import { useResponsaveis } from '../lib/responsaveis.js'
 import Topo from './Topo.jsx'
+import { EsqueletoQuadro, EsqueletoLista } from './Esqueleto.jsx'
+import Toast from './Toast.jsx'
 import { linkWhatsapp } from '../lib/format.js'
 import { rotuloOrigem, quandoCurto, faixaDoDia } from '../lib/lead.js'
 import { proximosPorLead } from '../lib/agenda.js'
@@ -145,9 +147,9 @@ export default function Kanban({ usuario, pagina, onPagina }) {
         </button>
       </Topo>
 
-      {erro && <p className="erro faixa">{erro}</p>}
+      <Toast mensagem={erro} onFechar={() => setErro('')} />
       {carregando ? (
-        <div className="centro">Carregando leads…</div>
+        visao === 'lista' ? <EsqueletoLista /> : <EsqueletoQuadro colunas={ETAPAS.length || 4} />
       ) : visao === 'lista' ? (
         <LeadLista leads={visiveis} busca={buscaAdiada} onAbrir={(lead) => setAberto({ lead, aba: 'dados' })} />
       ) : (
@@ -195,7 +197,7 @@ export default function Kanban({ usuario, pagina, onPagina }) {
                       >
                         {ETAPAS.map((e) => (
                           <option key={e.id} value={e.id}>
-                            {e.id === lead.status ? `Etapa: ${e.rotulo}` : `Mover para ${e.rotulo}`}
+                            {e.id === lead.status ? `↕ Mover de "${e.rotulo}"…` : `Mover para ${e.rotulo}`}
                           </option>
                         ))}
                       </select>

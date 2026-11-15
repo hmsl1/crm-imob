@@ -27,6 +27,7 @@ import { lerRascunho, salvarRascunho, limparRascunho, temConteudo } from '../lib
 import { acharPorTelefone, contarImoveis } from '../lib/proprietario.js'
 import { hojeISO } from '../lib/datas.js'
 import Opcoes from './Opcoes.jsx'
+import { useConfirmar } from '../lib/confirmacao.jsx'
 
 const NOVO_CORRETOR = '__novo__'
 
@@ -81,6 +82,7 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
   const [erro, setErro] = useState('')
   const [duplicados, setDuplicados] = useState(null) // imóveis já cadastrados no mesmo endereço
   const { saindo, fechar } = useFechamentoAnimado()
+  const confirmar = useConfirmar()
 
   // Props prontas para os campos (valor + onChange)
   const texto = (nome) => ({
@@ -253,8 +255,13 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
     setFotos((f) => [url, ...f.filter((u) => u !== url)])
   }
 
-  function descartarRascunho() {
-    if (!window.confirm('Descartar este cadastro? O que você preencheu e as fotos enviadas serão apagados.')) return
+  async function descartarRascunho() {
+    const ok = await confirmar({
+      titulo: 'Descartar cadastro',
+      mensagem: 'Descartar este cadastro? O que você preencheu e as fotos enviadas serão apagados.',
+      textoConfirmar: 'Descartar',
+    })
+    if (!ok) return
     limparRascunho(usuario.id)
     setForm((f) => ({ ...formDoImovel(null), captador_id: f.captador_id }))
     setRecuperadoEm(null)
@@ -268,7 +275,12 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
   // Fechar (✕, fora da janela ou Cancelar). Em imóvel novo com conteúdo, pede confirmação antes de perder o cadastro.
   async function cancelar() {
     if (!editando && temConteudo(form, fotos)) {
-      if (!window.confirm('Descartar este cadastro? O que você preencheu e as fotos enviadas serão apagados.')) return
+      const ok = await confirmar({
+        titulo: 'Descartar cadastro',
+        mensagem: 'Descartar este cadastro? O que você preencheu e as fotos enviadas serão apagados.',
+        textoConfirmar: 'Descartar',
+      })
+      if (!ok) return
     }
     if (!editando) limparRascunho(usuario.id)
     if (novas.length) await apagarFotos(novas).catch(() => {})
@@ -322,7 +334,12 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
   }
 
   async function excluir() {
-    if (!window.confirm(`Excluir o imóvel "${imovel.titulo}"? As fotos também serão apagadas.`)) return
+    const ok = await confirmar({
+      titulo: 'Excluir imóvel',
+      mensagem: `Excluir o imóvel "${imovel.titulo}"? As fotos também serão apagadas.`,
+      textoConfirmar: 'Excluir',
+    })
+    if (!ok) return
     const { error } = await supabase.from('imoveis').delete().eq('id', imovel.id)
     if (error) {
       setErro(error.message)

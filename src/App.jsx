@@ -10,6 +10,7 @@ import Inicio from './components/Inicio.jsx'
 import Vitrine from './components/Vitrine.jsx'
 import VitrineImovel from './components/VitrineImovel.jsx'
 import Contato from './components/Contato.jsx'
+import { ConfirmacaoProvider } from './lib/confirmacao.jsx'
 
 export default function App() {
   const { rota, navegar } = useRota()
@@ -78,5 +79,9 @@ export default function App() {
   if (carregando) return <div className="centro">Carregando…</div>
   if (!sessao) return <Login />
 
-  return <AreaLogada usuario={sessao.user} pagina={pagina} saindoPagina={saindoPagina} onPagina={trocarPagina} />
+  return (
+    <ConfirmacaoProvider>
+      <AreaLogada usuario={sessao.user} pagina={pagina} saindoPagina={saindoPagina} onPagina={trocarPagina} />
+    </ConfirmacaoProvider>
+  )
 }
