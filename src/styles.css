@@ -853,7 +853,7 @@ button.titulo-troca:focus-visible { outline: 2px solid var(--acento-texto); outl
 }
 .vitrine-busca { text-align: center; padding: 24px 0 16px; }
 .vitrine-busca h1 { font-size: 1.6rem; margin: 0 0 16px; }
-.busca-codigo { width: min(560px, 100%); max-width: 100%; height: 48px; font-size: 1rem; border-radius: 999px; padding: 0 20px; }
+.busca-codigo { width: min(560px, 100%); max-width: 100%; height: 48px; font-size: 1rem; border-radius: 999px; padding: 0 20px; align-self: center; }
 .dica-busca { margin: 8px 0 0; color: var(--suave); font-size: 0.85rem; }
 .vitrine .filtros { justify-content: center; padding: 12px 0; }
 .vitrine .contagem-filtro { margin-left: 0; }
@@ -872,10 +872,6 @@ button.titulo-troca:focus-visible { outline: 2px solid var(--acento-texto); outl
 .rodape-identidade strong { color: #fff; font-weight: 600; }
 .rodape-identidade a { color: var(--v-teal); }
 .rodape-identidade > :is(strong, span, a) ~ :is(strong, span, a)::before { content: '·'; margin-right: 10px; color: rgba(255, 255, 255, 0.3); }
-.rodape-selo-logo {
-  width: 32px; height: 32px; border-radius: 50%; object-fit: cover;
-  background: #fff; border: 1px solid rgba(255, 255, 255, 0.25);
-}
 .rodape-aviso { font-size: 0.76rem; margin: 0; color: rgba(255, 255, 255, 0.5); }
 
 .modal-anuncie label { display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; margin-bottom: 12px; }
@@ -969,11 +965,13 @@ button.titulo-troca:focus-visible { outline: 2px solid var(--acento-texto); outl
 }
 .busca-abas button.ativa { background: var(--v-orange); color: #fff; }
 
-.busca-imoveis { display: flex; flex-direction: column; gap: 10px; background: transparent; border: none; border-radius: 0; padding: 0; }
-.busca-grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.busca-imoveis { display: flex; flex-direction: column; align-items: center; gap: 12px; background: transparent; border: none; border-radius: 0; padding: 0; }
+.busca-grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; width: 100%; }
 .busca-grade select, .busca-grade input { height: 44px; border-radius: 10px; }
-.busca-grade button.primario { grid-column: span 1; background: var(--v-navy); border-radius: 10px; }
-.busca-grade button.primario:hover { background: var(--v-navy-2); }
+/* O botão fica fora da grade de campos, numa linha própria e centralizado — dentro da grade
+   ele "sobrava" sozinho numa coluna qualquer do auto-fit, meio torto. */
+.busca-botao { background: var(--v-navy); border-radius: 999px; padding: 0 40px; height: 46px; font-weight: 700; }
+.busca-botao:hover { background: var(--v-navy-2); }
 
 /* ---------- Destaques: carrossel circular (estilo "stories") ---------- */
 .secao-destaques { padding: 8px 0 28px; }
@@ -987,8 +985,12 @@ button.titulo-troca:focus-visible { outline: 2px solid var(--acento-texto); outl
 .destaque-avatar img, .destaque-avatar .sem-foto { position: relative; z-index: 1; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; border: 2.5px solid #fff; box-sizing: border-box; background: var(--bg); }
 .destaque-preco { position: absolute; z-index: 2; left: 50%; bottom: -4px; transform: translateX(-50%); background: var(--v-navy); color: #fff; font-size: 0.62rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
 .destaque-bairro { font-size: 0.76rem; color: var(--suave); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 92px; }
-.destaques-seta { flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--borda); background: var(--superficie); color: var(--v-navy); font-size: 1.3rem; line-height: 1; cursor: pointer; display: grid; place-items: center; }
+.destaques-seta {
+  flex-shrink: 0; width: 34px; height: 34px; padding: 0; border-radius: 50%; border: 1px solid var(--borda);
+  background: var(--superficie); color: var(--v-navy); cursor: pointer; display: grid; place-items: center;
+}
 .destaques-seta:hover { background: var(--bg); }
+.destaques-seta svg { width: 16px; height: 16px; display: block; }
 @media (max-width: 640px) { .destaques-seta { display: none; } }
 
 /* ---------- Pop-up "stories" de um imóvel ---------- */
@@ -999,7 +1001,14 @@ button.titulo-troca:focus-visible { outline: 2px solid var(--acento-texto); outl
 }
 .stories-barras { position: absolute; top: 10px; left: 10px; right: 10px; z-index: 3; display: flex; gap: 4px; }
 .stories-barra { flex: 1; height: 3px; border-radius: 999px; background: rgba(255, 255, 255, 0.3); overflow: hidden; }
-.stories-barra-preenchida { height: 100%; background: #fff; width: 0%; transition-property: width; transition-timing-function: linear; }
+.stories-barra-preenchida { height: 100%; background: #fff; width: 0%; }
+/* A foto "atual" usa uma animação @keyframes (não "transition"), porque animação dá pra pausar de
+   verdade com animation-play-state — transition não pausa no meio, só anima entre dois valores
+   fixos. Troca de foto = troca de classe nesse mesmo elemento = a animação reinicia do zero sozinha. */
+@keyframes stories-preencher { from { width: 0%; } to { width: 100%; } }
+.stories-barra-preenchida.atual {
+  animation-name: stories-preencher; animation-timing-function: linear; animation-fill-mode: forwards;
+}
 .stories-cabecalho { position: absolute; top: 22px; left: 10px; right: 10px; z-index: 3; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .stories-marca { display: flex; align-items: center; gap: 8px; color: #fff; min-width: 0; }
 .stories-marca img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
@@ -1008,9 +1017,12 @@ button.titulo-troca:focus-visible { outline: 2px solid var(--acento-texto); outl
 .stories-marca strong { font-size: 0.86rem; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5); }
 .stories-marca span { font-size: 0.72rem; opacity: 0.85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .stories-acoes-topo { display: flex; gap: 6px; flex-shrink: 0; }
-.stories-acoes-topo button { width: 32px; height: 32px; border-radius: 50%; border: none; background: rgba(255, 255, 255, 0.18); color: #fff; display: grid; place-items: center; cursor: pointer; }
+.stories-acoes-topo button {
+  width: 32px; height: 32px; padding: 0; line-height: 0; border-radius: 50%; border: none;
+  background: rgba(255, 255, 255, 0.18); color: #fff; display: grid; place-items: center; cursor: pointer;
+}
 .stories-acoes-topo button:hover { background: rgba(255, 255, 255, 0.3); }
-.stories-acoes-topo svg { width: 18px; height: 18px; }
+.stories-acoes-topo svg { width: 18px; height: 18px; display: block; }
 .stories-foto { position: relative; flex: 1; min-height: 0; background: #111; display: grid; place-items: center; }
 .stories-foto img { width: 100%; height: 100%; object-fit: contain; background: #000; }
 .stories-sem-foto { color: rgba(255, 255, 255, 0.6); }

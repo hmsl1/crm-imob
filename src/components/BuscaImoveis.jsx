@@ -76,10 +76,10 @@ export default function BuscaImoveis({ imoveis, valores, aoMudar, aoBuscar }) {
         )}
         <input type="number" min="0" placeholder="Valor mínimo" aria-label="Valor mínimo" {...campo('valorMin')} />
         <input type="number" min="0" placeholder="Valor máximo" aria-label="Valor máximo" {...campo('valorMax')} />
-        <button type="submit" className="primario">
-          Buscar
-        </button>
       </div>
+      <button type="submit" className="primario busca-botao">
+        Buscar
+      </button>
     </form>
   )
 }

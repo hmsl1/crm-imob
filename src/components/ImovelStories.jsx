@@ -103,16 +103,16 @@ export default function ImovelStories({ codigo, aoFechar, navegar, linkImovel })
         <div className="stories-barras">
           {(total > 0 ? fotos : [0]).map((_, idx) => (
             <div className="stories-barra" key={idx}>
-              <div
-                className="stories-barra-preenchida"
-                style={
-                  idx < atual
-                    ? { width: '100%', transition: 'none' }
-                    : idx === atual
-                      ? { width: '100%', transitionDuration: `${restanteRef.current}ms`, animationPlayState: pausado ? 'paused' : 'running' }
-                      : { width: '0%', transition: 'none' }
-                }
-              />
+              {idx < atual ? (
+                <div className="stories-barra-preenchida" style={{ width: '100%' }} />
+              ) : idx === atual ? (
+                <div
+                  className="stories-barra-preenchida atual"
+                  style={{ animationDuration: `${INTERVALO_MS}ms`, animationPlayState: pausado ? 'paused' : 'running' }}
+                />
+              ) : (
+                <div className="stories-barra-preenchida" style={{ width: '0%' }} />
+              )}
             </div>
           ))}
         </div>

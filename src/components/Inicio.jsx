@@ -112,7 +112,9 @@ export default function Inicio({ navegar }) {
             <span className="rotulo-destaques">Destaques</span>
           </div>
           <div className="destaques-trilha-wrap">
-            <button type="button" className="destaques-seta esq" aria-label="Voltar" onClick={() => trilhaRef.current?.scrollBy({ left: -240, behavior: 'smooth' })}>‹</button>
+            <button type="button" className="destaques-seta esq" aria-label="Voltar" onClick={() => trilhaRef.current?.scrollBy({ left: -240, behavior: 'smooth' })}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
+            </button>
             <div className="destaques-trilha" ref={trilhaRef}>
               {destaques.map((i) => {
                 const precos = precosDoImovel(i)
@@ -127,7 +129,9 @@ export default function Inicio({ navegar }) {
                 )
               })}
             </div>
-            <button type="button" className="destaques-seta dir" aria-label="Avançar" onClick={() => trilhaRef.current?.scrollBy({ left: 240, behavior: 'smooth' })}>›</button>
+            <button type="button" className="destaques-seta dir" aria-label="Avançar" onClick={() => trilhaRef.current?.scrollBy({ left: 240, behavior: 'smooth' })}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+            </button>
           </div>
         </section>
       )}

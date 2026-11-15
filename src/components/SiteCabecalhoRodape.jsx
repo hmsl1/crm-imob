@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { linkInicio, linkVitrine, linkContato } from '../lib/rota.js'
 import { useContatoSite } from '../lib/useContatoSite.js'
 import { linkWhatsapp, telefoneExibicao } from '../lib/format.js'
-import { MARCA } from '../config.js'
 import Marca from './Marca.jsx'
 
 // Cabeçalho do site público: "Início", "Imóveis" e "Contato" são páginas; o botão "Anuncie seu
@@ -88,7 +87,6 @@ export function SiteRodape() {
         </nav>
       </div>
       <div className="rodape-identidade">
-        {MARCA.logo && <img src={MARCA.logo} alt="" className="rodape-selo-logo" />}
         {contato?.nome_responsavel && <strong>{contato.nome_responsavel}</strong>}
         {contato?.creci && <span>CRECI-RJ {contato.creci}</span>}
         {contato?.email_contato && <span>{contato.email_contato}</span>}
