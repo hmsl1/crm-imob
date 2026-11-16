@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { precosDoImovel, linkWhatsapp } from '../lib/format.js'
 import { mensagemInteresse } from '../lib/vitrine.js'
@@ -18,8 +18,6 @@ export default function ImovelStories({ codigo, aoFechar, navegar, linkImovel })
   const [pausado, setPausado] = useState(false)
   const contato = useContatoSite()
   const whatsapp = contato?.whatsapp ?? null
-  const inicioRef = useRef(0)
-  const restanteRef = useRef(INTERVALO_MS)
 
   useEffect(() => {
     let ativo = true
@@ -59,25 +57,16 @@ export default function ImovelStories({ codigo, aoFechar, navegar, linkImovel })
   const fotos = imovel?.fotos ?? []
   const total = fotos.length
 
-  // Avança sozinho; ao terminar a última foto, volta para a primeira (o pop-up continua aberto).
-  useEffect(() => {
-    if (!imovel || total === 0 || pausado) return
-    inicioRef.current = Date.now()
-    const t = setTimeout(() => setAtual((a) => (a + 1) % total), restanteRef.current)
-    return () => {
-      clearTimeout(t)
-      restanteRef.current -= Date.now() - inicioRef.current
-      if (restanteRef.current <= 0) restanteRef.current = INTERVALO_MS
-    }
-  }, [imovel, total, atual, pausado])
-
-  useEffect(() => {
-    restanteRef.current = INTERVALO_MS
-  }, [atual])
+  // Avança sozinho quando a barrinha da foto atual termina de preencher (ao terminar a última foto,
+  // volta para a primeira; o pop-up continua aberto). Ligar o avanço diretamente ao fim da mesma
+  // animação que desenha a barra garante que os dois nunca saiam de sincronia: não há um temporizador
+  // separado tentando adivinhar quanto tempo falta.
+  function aoTerminarBarra() {
+    if (total > 1) setAtual((a) => (a + 1) % total)
+  }
 
   function irPara(delta) {
     if (total === 0) return
-    restanteRef.current = INTERVALO_MS
     setAtual((a) => (a + delta + total) % total)
   }
 
@@ -109,6 +98,7 @@ export default function ImovelStories({ codigo, aoFechar, navegar, linkImovel })
                 <div
                   className="stories-barra-preenchida atual"
                   style={{ animationDuration: `${INTERVALO_MS}ms`, animationPlayState: pausado ? 'paused' : 'running' }}
+                  onAnimationEnd={aoTerminarBarra}
                 />
               ) : (
                 <div className="stories-barra-preenchida" style={{ width: '0%' }} />
