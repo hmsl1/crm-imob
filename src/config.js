@@ -13,4 +13,4 @@ export const MARCA = {
 // (GA4) e, no futuro, pixels de tráfego pago (Google Ads, Meta etc.), tudo sem mexer no código.
 // ID do contêiner (começa com "GTM-"), em tagmanager.google.com. Use null para desativar
 // (o painel/CRM nunca é rastreado, só as páginas públicas do site).
-export const GTM_CONTAINER_ID = 'GTM-KX3PWPV5'
+export const GTM_CONTAINER_ID = 'GTM-T98CHSDF'
