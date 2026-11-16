@@ -21,15 +21,14 @@ function carregarLogo() {
   return logoPromise
 }
 
-// Desenha a logo no canto inferior direito, semitransparente, em cima da foto já reduzida.
+// Desenha a logo centralizada e translúcida por cima da foto já reduzida.
 async function aplicarMarcaDagua(ctx, largura, altura) {
   const logo = await carregarLogo()
   if (!logo) return
-  const diametro = Math.round(Math.min(largura, altura) * 0.22)
-  const margem = Math.round(Math.min(largura, altura) * 0.035)
+  const diametro = Math.round(Math.min(largura, altura) * 0.46)
   ctx.save()
-  ctx.globalAlpha = 0.82
-  ctx.drawImage(logo, largura - diametro - margem, altura - diametro - margem, diametro, diametro)
+  ctx.globalAlpha = 0.22
+  ctx.drawImage(logo, (largura - diametro) / 2, (altura - diametro) / 2, diametro, diametro)
   ctx.restore()
 }
 
