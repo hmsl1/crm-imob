@@ -1023,3 +1023,11 @@ grant usage on schema public to authenticated;
 grant select, insert, update, delete on all tables in schema public to authenticated;
 alter default privileges in schema public
   grant select, insert, update, delete on tables to authenticated;
+
+-- O papel "service_role" (chave secreta/admin, usada só em scripts fora do site, nunca no navegador)
+-- também não recebe acesso automático nesse projeto. Sem isso, até ele toma "permission denied".
+grant usage on schema public to service_role;
+grant all on all tables in schema public to service_role;
+grant all on all sequences in schema public to service_role;
+alter default privileges in schema public
+  grant all on tables to service_role;
