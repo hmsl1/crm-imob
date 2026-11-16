@@ -957,8 +957,8 @@ button.titulo-troca:focus-visible { outline: 2px solid var(--acento-texto); outl
 .hero-cta .cta-primario:hover { background: var(--v-painel-verde-escuro); }
 .hero-cta .cta-secundario { background: var(--v-painel-verde); color: var(--v-painel-creme); }
 .hero-cta .cta-secundario:hover { background: var(--v-painel-verde-escuro); }
-.hero-cta .cta-contorno { background: transparent; color: #fff; border: 1.5px solid rgba(255, 255, 255, 0.6); }
-.hero-cta .cta-contorno:hover { background: rgba(255, 255, 255, 0.12); }
+.hero-cta .cta-contorno { background: var(--v-painel-creme); color: var(--v-painel-verde); border: 1.5px solid var(--v-painel-verde); }
+.hero-cta .cta-contorno:hover { background: #fff; }
 
 .busca-flutuante-wrap { position: relative; margin: -58px 0 40px; z-index: 2; }
 .busca-flutuante {
