@@ -234,7 +234,7 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
     const falhas = []
     for (const arquivo of arquivos.slice(0, vagas)) {
       try {
-        urls.push(await enviarFoto(arquivo, usuario.id))
+        urls.push(await enviarFoto(arquivo, usuario.id, { marcaDagua: true }))
       } catch (err) {
         falhas.push(`${arquivo.name}: ${err.message}`)
       }

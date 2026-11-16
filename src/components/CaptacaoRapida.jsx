@@ -52,7 +52,7 @@ export default function CaptacaoRapida({ usuario, onFechar, onSalvo }) {
     const urls = []
     for (const arquivo of arquivos.slice(0, vagas)) {
       try {
-        urls.push(await enviarFoto(arquivo, usuario.id))
+        urls.push(await enviarFoto(arquivo, usuario.id, { marcaDagua: true }))
       } catch (err) {
         setErro(`${arquivo.name}: ${err.message}`)
       }
