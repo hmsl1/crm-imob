@@ -27,6 +27,22 @@ export default function App() {
 
   useEffect(() => () => clearTimeout(timerPagina.current), [])
 
+  // Sem isso, se o usuário soltar um arquivo um pixel fora da área de upload de fotos (muito fácil
+  // de acontecer na prática), o navegador abre a imagem em branco por cima do site inteiro. Isso
+  // garante que um arquivo arrastado só faz algo se uma área de soltar específica (como a de fotos
+  // do imóvel) realmente tratar o evento.
+  useEffect(() => {
+    function bloquear(e) {
+      e.preventDefault()
+    }
+    window.addEventListener('dragover', bloquear)
+    window.addEventListener('drop', bloquear)
+    return () => {
+      window.removeEventListener('dragover', bloquear)
+      window.removeEventListener('drop', bloquear)
+    }
+  }, [])
+
   useEffect(() => {
     if (!configurado) return
     supabase.auth.getSession().then(({ data }) => {

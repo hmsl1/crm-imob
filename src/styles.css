@@ -333,6 +333,8 @@ dl.dados a { color: var(--acento-texto); }
 .fotos { margin-bottom: 12px; border-radius: var(--raio); transition: background 0.1s, box-shadow 0.1s; }
 .fotos.arrastando-arquivo { background: var(--superficie); box-shadow: 0 0 0 2px var(--acento) inset; }
 .rotulo-fotos { display: block; font-size: 0.85rem; color: var(--suave); margin-bottom: 6px; }
+.rotulo-com-acao { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.rotulo-com-acao .gerar-descricao { font-size: 0.85rem; padding: 2px 0; white-space: nowrap; }
 .fotos-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; margin-bottom: 8px; }
 .miniatura { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; border: 1px solid var(--borda); background: var(--bg); }
 .miniatura img { width: 100%; height: 100%; object-fit: cover; display: block; }

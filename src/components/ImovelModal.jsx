@@ -26,6 +26,7 @@ import { useFechamentoAnimado } from '../lib/useFechamentoAnimado.js'
 import { lerRascunho, salvarRascunho, limparRascunho, temConteudo } from '../lib/rascunho.js'
 import { acharPorTelefone, contarImoveis } from '../lib/proprietario.js'
 import { hojeISO } from '../lib/datas.js'
+import { gerarDescricaoAutomatica } from '../lib/descricaoAutomatica.js'
 import Opcoes from './Opcoes.jsx'
 import { useConfirmar } from '../lib/confirmacao.jsx'
 
@@ -101,6 +102,16 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
       ...f,
       [chave]: f[chave].includes(id) ? f[chave].filter((x) => x !== id) : [...f[chave], id],
     }))
+
+  async function gerarDescricao() {
+    if (form.comentarios.trim() && !(await confirmar({
+      titulo: 'Substituir os comentários?',
+      mensagem: 'Já existe um texto neste campo. Gerar a descrição automática vai substituí-lo.',
+      textoConfirmar: 'Substituir',
+      perigo: false,
+    }))) return
+    setForm((f) => ({ ...f, comentarios: gerarDescricaoAutomatica(f) }))
+  }
 
   // Salvamento automático do rascunho (só em novo imóvel), logo após cada alteração
   useEffect(() => {
@@ -790,7 +801,12 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
               </div>
 
               <label>
-                Comentários
+                <span className="rotulo-com-acao">
+                  Comentários
+                  <button type="button" className="link gerar-descricao" onClick={gerarDescricao}>
+                    ✨ Gerar descrição automática
+                  </button>
+                </span>
                 <textarea rows={6} {...texto('comentarios')} placeholder="Observações livres sobre o imóvel" />
               </label>
             </>
