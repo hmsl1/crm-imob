@@ -764,6 +764,11 @@ button.titulo-troca:focus-visible { outline: 2px solid var(--acento-texto); outl
   --v-orange-dark: #d8611c;
   --v-teal: #1fb3ae;
   --v-cream: #fdf4ea;
+  /* Verde do painel (CRM): usado só nos botões "Imóveis à venda", "Alugar", "Todos" e "Buscar",
+     a pedido do cliente, pra ficarem iguais às cores do painel em vez do laranja/verde-água do site. */
+  --v-painel-verde: #243532;
+  --v-painel-verde-escuro: #17231f;
+  --v-painel-creme: #f4ecdf;
   --bg: var(--v-cream);
   --superficie: #ffffff;
   --borda: #ecdfd0;
@@ -948,10 +953,10 @@ button.titulo-troca:focus-visible { outline: 2px solid var(--acento-texto); outl
   border: none; border-radius: 999px; padding: 13px 26px; font-weight: 700; font-size: 0.95rem;
   text-decoration: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
 }
-.hero-cta .cta-primario { background: var(--v-orange); color: #fff; }
-.hero-cta .cta-primario:hover { background: var(--v-orange-dark); }
-.hero-cta .cta-secundario { background: var(--v-teal); color: #fff; }
-.hero-cta .cta-secundario:hover { background: color-mix(in srgb, var(--v-teal) 85%, black); }
+.hero-cta .cta-primario { background: var(--v-painel-verde); color: var(--v-painel-creme); }
+.hero-cta .cta-primario:hover { background: var(--v-painel-verde-escuro); }
+.hero-cta .cta-secundario { background: var(--v-painel-verde); color: var(--v-painel-creme); }
+.hero-cta .cta-secundario:hover { background: var(--v-painel-verde-escuro); }
 .hero-cta .cta-contorno { background: transparent; color: #fff; border: 1.5px solid rgba(255, 255, 255, 0.6); }
 .hero-cta .cta-contorno:hover { background: rgba(255, 255, 255, 0.12); }
 
@@ -966,15 +971,15 @@ button.titulo-troca:focus-visible { outline: 2px solid var(--acento-texto); outl
   border-radius: 999px; cursor: pointer; font-size: 0.88rem; transition: background-color 0.2s ease, color 0.2s ease;
 }
 .busca-abas button:hover { background: color-mix(in srgb, var(--v-navy) 16%, transparent); }
-.busca-abas button.ativa, .busca-abas button.ativa:hover { background: var(--v-orange); color: #fff; }
+.busca-abas button.ativa, .busca-abas button.ativa:hover { background: var(--v-painel-verde); color: var(--v-painel-creme); }
 
 .busca-imoveis { display: flex; flex-direction: column; align-items: center; gap: 12px; background: transparent; border: none; border-radius: 0; padding: 0; }
 .busca-grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; width: 100%; }
 .busca-grade select, .busca-grade input { height: 44px; border-radius: 10px; }
 /* O botão fica fora da grade de campos, numa linha própria e centralizado — dentro da grade
    ele "sobrava" sozinho numa coluna qualquer do auto-fit, meio torto. */
-.busca-botao { background: var(--v-navy); border-radius: 999px; padding: 0 40px; height: 46px; font-weight: 700; }
-.busca-botao:hover { background: var(--v-navy-2); }
+button.primario.busca-botao { background: var(--v-painel-verde); color: var(--v-painel-creme); border-radius: 999px; padding: 0 40px; height: 46px; font-weight: 700; }
+button.primario.busca-botao:hover:not(:disabled) { background: var(--v-painel-verde-escuro); }
 
 /* ---------- Destaques: carrossel circular (estilo "stories") ---------- */
 .secao-destaques { padding: 8px 0 28px; }
