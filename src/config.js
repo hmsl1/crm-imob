@@ -8,3 +8,8 @@ export const MARCA = {
   // Use null para não ter logo.
   logo: '/logo.png',
 }
+
+// Google Analytics (GA4) do site público (vitrine). Pegue o "ID da métrica" (começa com "G-")
+// em analytics.google.com > Administrador > Fluxos de dados > seu site. Use null para desativar
+// (o painel/CRM nunca é rastreado, só as páginas públicas do site).
+export const GA_MEASUREMENT_ID = null
