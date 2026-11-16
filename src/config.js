@@ -9,7 +9,8 @@ export const MARCA = {
   logo: '/logo.png',
 }
 
-// Google Analytics (GA4) do site público (vitrine). Pegue o "ID da métrica" (começa com "G-")
-// em analytics.google.com > Administrador > Fluxos de dados > seu site. Use null para desativar
+// Google Tag Manager do site público (vitrine) — dentro dele fica configurado o Google Analytics
+// (GA4) e, no futuro, pixels de tráfego pago (Google Ads, Meta etc.), tudo sem mexer no código.
+// ID do contêiner (começa com "GTM-"), em tagmanager.google.com. Use null para desativar
 // (o painel/CRM nunca é rastreado, só as páginas públicas do site).
-export const GA_MEASUREMENT_ID = null
+export const GTM_CONTAINER_ID = 'GTM-KX3PWPV5'
