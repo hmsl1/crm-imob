@@ -9,6 +9,7 @@ import { linkWhatsapp } from '../lib/format.js'
 import { comCodigo } from '../lib/imovel.js'
 import Topo from './Topo.jsx'
 import { LeadModal } from '../componentesPreguicosos.js'
+import { EsqueletoLista } from './Esqueleto.jsx'
 
 const RESULTADOS = STATUS_VISITA.filter((s) => s.id !== 'agendada')
 
@@ -71,7 +72,7 @@ export default function Agenda({ usuario, pagina, onPagina }) {
       <Topo usuario={usuario} pagina={pagina} onPagina={onPagina} />
       <main className="agenda">
         {erro && <p className="erro faixa">{erro}</p>}
-        {carregando && <div className="centro">Carregando agenda…</div>}
+        {carregando && <EsqueletoLista linhas={4} />}
         {!carregando && faixas.length === 0 && exclusividades.length === 0 && (
           <div className="vazio-grande">
             <p>Nada pendente. Crie lembretes de retorno e agende visitas dentro de cada lead.</p>

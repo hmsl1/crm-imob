@@ -2,24 +2,23 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { TIPOS_IMOVEL } from '../lib/imovel.js'
 import { precosDoImovel } from '../lib/format.js'
-import { bairrosDosImoveis, atendeBairro } from '../lib/bairros.js'
+import { atendeBairro } from '../lib/bairros.js'
 import { filtrarVitrine, buscaEhCodigo } from '../lib/vitrine.js'
 import { linkImovel } from '../lib/rota.js'
-import { SiteTopo, SiteRodape } from './SiteCabecalhoRodape.jsx'
-import BotaoWhatsappFlutuante from './BotaoWhatsappFlutuante.jsx'
+import { CaracteristicasImovel } from './IconesImovel.jsx'
+import BuscaImoveis from './BuscaImoveis.jsx'
+import LayoutPublico from './LayoutPublico.jsx'
 
 const rotulo = (lista, id) => lista.find((i) => i.id === id)?.rotulo ?? id
+const FILTROS_VAZIOS = { busca: '', tipo: '', finalidade: '', cidade: '', bairro: '', condominio: '', valorMin: '', valorMax: '' }
 
-// Site público: lista os imóveis disponíveis, com busca (inclusive por código) e filtros.
-// "Comprar"/"Alugar" (no cabeçalho) definem a finalidade pela URL; aqui só refinamos tipo e bairro.
-export default function Vitrine({ navegar, finalidadeInicial = '' }) {
+// Página "Imóveis": lista todos os imóveis disponíveis, com busca e filtros. Os filtros podem já
+// vir preenchidos pela URL (ex.: vindos da busca da Início ou de um "Imóveis por bairro").
+export default function Vitrine({ navegar, filtrosIniciais = {} }) {
   const [imoveis, setImoveis] = useState([])
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')
-  const [busca, setBusca] = useState('')
-  const [tipo, setTipo] = useState('')
-  const finalidade = finalidadeInicial
-  const [bairro, setBairro] = useState('')
+  const [filtros, setFiltros] = useState({ ...FILTROS_VAZIOS, ...filtrosIniciais })
 
   useEffect(() => {
     document.title = 'CRZ Imóveis'
@@ -42,53 +41,24 @@ export default function Vitrine({ navegar, finalidadeInicial = '' }) {
     }
   }, [])
 
-  const bairros = useMemo(() => bairrosDosImoveis(imoveis), [imoveis])
-  const bairroAtivo = bairros.some((b) => b.id === bairro) ? bairro : ''
   const filtrados = useMemo(
-    () => filtrarVitrine(imoveis, { busca, finalidade, tipo }).filter((i) => atendeBairro(i, bairroAtivo)),
-    [imoveis, busca, finalidade, tipo, bairroAtivo]
+    () => filtrarVitrine(imoveis, filtros).filter((i) => atendeBairro(i, filtros.bairro)),
+    [imoveis, filtros]
   )
-  const filtrando = busca || tipo || finalidade || bairroAtivo
+  const filtrando = Object.values(filtros).some(Boolean)
 
   const abrir = useCallback((codigo) => navegar(linkImovel(codigo)), [navegar])
 
   return (
-    <div className="vitrine">
-      <SiteTopo navegar={navegar} finalidade={finalidade} />
-
+    <LayoutPublico navegar={navegar} paginaAtiva="vitrine">
       <section className="vitrine-busca">
         <h1>Encontre o seu imóvel</h1>
-        <input
-          className="busca-codigo"
-          type="search"
-          placeholder="Busque por código (ex.: CA0001), título ou bairro"
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          aria-label="Buscar imóvel"
-        />
-        {buscaEhCodigo(busca) && <p className="dica-busca">Buscando pelo código {busca.toUpperCase()}</p>}
+        <BuscaImoveis imoveis={imoveis} valores={filtros} aoMudar={(campo, valor) => setFiltros((f) => ({ ...f, [campo]: valor }))} aoBuscar={() => {}} />
+        {buscaEhCodigo(filtros.busca) && <p className="dica-busca">Buscando pelo código {filtros.busca.toUpperCase()}</p>}
       </section>
 
-      <div className="filtros">
-        <select value={tipo} onChange={(e) => setTipo(e.target.value)} aria-label="Tipo">
-          <option value="">Todos os tipos</option>
-          {TIPOS_IMOVEL.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.rotulo}
-            </option>
-          ))}
-        </select>
-        <select value={bairroAtivo} onChange={(e) => setBairro(e.target.value)} aria-label="Bairro">
-          <option value="">Todos os bairros</option>
-          {bairros.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.rotulo} ({b.total})
-            </option>
-          ))}
-        </select>
-        <span className="contagem-filtro">
-          {filtrados.length} {filtrados.length === 1 ? 'imóvel' : 'imóveis'}
-        </span>
+      <div className="contagem-filtro faixa">
+        {filtrados.length} {filtrados.length === 1 ? 'imóvel' : 'imóveis'}
       </div>
 
       {erro && <p className="erro faixa">{erro}</p>}
@@ -112,6 +82,7 @@ export default function Vitrine({ navegar, finalidadeInicial = '' }) {
                 onKeyDown={(e) => e.key === 'Enter' && abrir(i.codigo)}
               >
                 <div className="foto">
+                  {i.nome_condominio && <span className="selo-condominio">{i.nome_condominio}</span>}
                   {i.foto_capa ? (
                     <img src={i.foto_capa} alt={i.titulo} loading="lazy" decoding="async" />
                   ) : (
@@ -120,38 +91,34 @@ export default function Vitrine({ navegar, finalidadeInicial = '' }) {
                   {i.total_fotos > 1 && <span className="selo-fotos">{i.total_fotos} fotos</span>}
                 </div>
                 <div className="corpo">
-                  {precos.length === 0 ? (
-                    <span className="preco">
-                      <small>Consulte o valor</small>
-                    </span>
-                  ) : (
-                    precos.map((p) => (
-                      <span className="preco" key={p.id}>
-                        {precos.length > 1 && <small>{p.rotulo} </small>}
-                        {p.texto}
-                      </span>
-                    ))
-                  )}
                   <span className="codigo-imovel">{i.codigo}</span>
                   <strong>{i.titulo}</strong>
-                  <span className="detalhes">{[rotulo(TIPOS_IMOVEL, i.tipo), i.bairro, i.cidade].filter(Boolean).join(' · ')}</span>
                   <span className="detalhes">
-                    {[
-                      i.dormitorios != null && `${i.dormitorios} ${i.dormitorios === 1 ? 'dormitório' : 'dormitórios'}`,
-                      i.area_construida != null && `${Number(i.area_construida)} m²`,
-                    ]
-                      .filter(Boolean)
-                      .join(' · ')}
+                    {[rotulo(TIPOS_IMOVEL, i.tipo), i.nome_condominio, i.bairro, i.cidade].filter(Boolean).join(' · ')}
                   </span>
+                  <CaracteristicasImovel imovel={i} />
+                  <div className="corpo-divisoria" />
+                  <div className="corpo-rodape">
+                    {precos.length === 0 ? (
+                      <span className="preco">
+                        <small>Consulte o valor</small>
+                      </span>
+                    ) : (
+                      precos.map((p) => (
+                        <span className="preco" key={p.id}>
+                          {precos.length > 1 && <small>{p.rotulo} </small>}
+                          {p.texto}
+                        </span>
+                      ))
+                    )}
+                    <span className="link ver-detalhes">Ver detalhes →</span>
+                  </div>
                 </div>
               </article>
             )
           })}
         </main>
       )}
-
-      <SiteRodape />
-      <BotaoWhatsappFlutuante />
-    </div>
+    </LayoutPublico>
   )
 }

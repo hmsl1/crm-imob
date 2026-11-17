@@ -7,6 +7,8 @@ import { useNomeDoCorretor } from '../lib/corretor.js'
 import Topo from './Topo.jsx'
 import { ImovelModal, ImovelDetalhes, CaptacaoRapida } from '../componentesPreguicosos.js'
 import { situacaoExclusividade } from '../lib/exclusividade.js'
+import { EsqueletoGrade } from './Esqueleto.jsx'
+import Toast from './Toast.jsx'
 
 const rotulo = (lista, id) => lista.find((i) => i.id === id)?.rotulo ?? id
 
@@ -100,10 +102,14 @@ export default function Imoveis({ usuario, pagina, onPagina }) {
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
         />
-        <button onClick={() => setCaptando(true)}>Captação rápida</button>
-        <button className="primario" onClick={() => setAberto({ modo: 'novo' })}>
-          + Novo imóvel
+        {/* Captação rápida é o caminho padrão: poucos campos, sem travar quem está em campo
+            tentando cadastrar rápido. O formulário completo (+ Novo imóvel) fica disponível,
+            mas não é mais o botão de maior destaque — a maioria dos cadastros não chega
+            completo de primeira mesmo (por isso existe o status "a completar"). */}
+        <button className="primario" onClick={() => setCaptando(true)}>
+          Captação rápida
         </button>
+        <button onClick={() => setAberto({ modo: 'novo' })}>+ Novo imóvel (completo)</button>
       </Topo>
 
       <div className="filtros">
@@ -150,10 +156,10 @@ export default function Imoveis({ usuario, pagina, onPagina }) {
         </span>
       </div>
 
-      {erro && <p className="erro faixa">{erro}</p>}
+      <Toast mensagem={erro} onFechar={() => setErro('')} />
 
       {carregando ? (
-        <div className="centro">Carregando imóveis…</div>
+        <EsqueletoGrade />
       ) : filtrados.length === 0 ? (
         <div className="vazio-grande">
           {filtrando ? (
@@ -161,8 +167,11 @@ export default function Imoveis({ usuario, pagina, onPagina }) {
           ) : (
             <>
               <p>Você ainda não cadastrou nenhum imóvel.</p>
-              <button className="primario" onClick={() => setAberto({ modo: 'novo' })}>
+              <button className="primario" onClick={() => setCaptando(true)}>
                 Cadastrar o primeiro imóvel
+              </button>
+              <button className="link" onClick={() => setAberto({ modo: 'novo' })}>
+                Prefiro o formulário completo
               </button>
             </>
           )}

@@ -7,6 +7,11 @@ export const CHAVE_WHATSAPP_VITRINE = 'whatsapp_vitrine'
 export const CHAVE_NOME_RESPONSAVEL = 'nome_responsavel'
 export const CHAVE_CRECI = 'creci'
 export const CHAVE_EMAIL_CONTATO = 'email_contato'
+export const CHAVE_TAGLINE_SITE = 'tagline_site'
+export const CHAVE_SOBRE_EMPRESA = 'sobre_empresa'
+export const CHAVE_INSTAGRAM_HANDLE = 'instagram_handle'
+export const CHAVE_VIDEOS_SITE = 'videos_site'
+export const CHAVE_HERO_IMAGEM_URL = 'hero_imagem_url'
 
 export function validarWhatsapp(v) {
   const d = digitosWhatsapp(v)

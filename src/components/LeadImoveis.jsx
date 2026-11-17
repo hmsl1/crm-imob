@@ -6,6 +6,7 @@ import { STATUS_VISITA, deInputLocal, quandoCurto, validarVisita } from '../lib/
 import { abrirWhatsapp } from '../lib/whatsapp.js'
 import { montarMensagem } from '../lib/lead.js'
 import Opcoes from './Opcoes.jsx'
+import { useConfirmar } from '../lib/confirmacao.jsx'
 
 const rotuloTipo = (id) => TIPOS_IMOVEL.find((t) => t.id === id)?.rotulo ?? id
 
@@ -14,6 +15,7 @@ export default function LeadImoveis({ lead, corretor, dados, onMudou, onErro, on
   const { vinculos, visitas, imoveis } = dados
   const [novoVinculo, setNovoVinculo] = useState('')
   const [visita, setVisita] = useState({ imovel_id: '', quando: '', observacoes: '' })
+  const confirmar = useConfirmar()
 
   const livres = imoveis.filter((i) => !vinculos.some((v) => v.id === i.id))
   const imovelDaVisita = (v) => imoveis.find((i) => i.id === v.imovel_id)
@@ -58,7 +60,11 @@ export default function LeadImoveis({ lead, corretor, dados, onMudou, onErro, on
   }
 
   const mudarStatus = (id, status) => executar(supabase.from('visitas').update({ status }).eq('id', id))
-  const excluirVisita = (id) => window.confirm('Excluir esta visita?') && executar(supabase.from('visitas').delete().eq('id', id))
+  const excluirVisita = async (id) => {
+    if (await confirmar({ titulo: 'Excluir visita', mensagem: 'Excluir esta visita?', textoConfirmar: 'Excluir' })) {
+      executar(supabase.from('visitas').delete().eq('id', id))
+    }
+  }
 
   return (
     <>

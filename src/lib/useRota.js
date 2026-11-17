@@ -1,6 +1,8 @@
 // Navegação do site sem recarregar a página (histórico do navegador funciona normalmente: voltar/avançar).
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
+import { useEffect } from 'react'
 import { rotaDoCaminho } from './rota.js'
+import { registrarPageView } from './analytics.js'
 
 export function useRota() {
   const [local, setLocal] = useState(() =>
@@ -25,13 +27,11 @@ export function useRota() {
 
   const rota = rotaDoCaminho(local.pathname, local.search)
 
-  // raiz do domínio: troca a URL para /imoveis sem deixar "/" no histórico (substitui, não empilha)
+  // Estatística de acesso: só nas páginas públicas (nunca no painel/CRM), a cada troca de página.
   useEffect(() => {
-    if (rota.pagina === 'redirecionar') {
-      window.history.replaceState({}, '', rota.destino)
-      setLocal({ pathname: rota.destino, search: '' })
-    }
-  }, [rota.pagina, rota.destino])
+    if (rota.pagina === 'painel') return
+    registrarPageView(local.pathname + local.search, document.title)
+  }, [rota.pagina, local.pathname, local.search])
 
   return { rota, navegar }
 }

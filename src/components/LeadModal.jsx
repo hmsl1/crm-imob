@@ -21,6 +21,7 @@ import CamposEtapa from './CamposEtapa.jsx'
 import LeadImoveis from './LeadImoveis.jsx'
 import LeadContato from './LeadContato.jsx'
 import CompartilharFicha from './CompartilharFicha.jsx'
+import { useConfirmar } from '../lib/confirmacao.jsx'
 
 const ABAS = [
   { id: 'dados', rotulo: 'Dados' },
@@ -47,6 +48,7 @@ export default function LeadModal({ lead, usuario, abaInicial = 'dados', onFecha
   const [compartilhando, setCompartilhando] = useState(null) // imóvel
   const [duplicados, setDuplicados] = useState(null) // [{ lead, motivos }] quando o contato já existe em outro lead
   const { saindo, fechar } = useFechamentoAnimado()
+  const confirmar = useConfirmar()
 
   const dados = useDadosDoLead(lead?.id)
   const { nome: corretor } = useNomeDoCorretor(usuario)
@@ -105,7 +107,12 @@ export default function LeadModal({ lead, usuario, abaInicial = 'dados', onFecha
   }
 
   async function excluir() {
-    if (!window.confirm(`Excluir o lead "${lead.nome}"? Isso apaga também histórico, lembretes e visitas.`)) return
+    const ok = await confirmar({
+      titulo: 'Excluir lead',
+      mensagem: `Excluir o lead "${lead.nome}"? Isso apaga também histórico, lembretes e visitas.`,
+      textoConfirmar: 'Excluir',
+    })
+    if (!ok) return
     const { error } = await supabase.from('leads').delete().eq('id', lead.id)
     if (error) setErro(error.message)
     else fechar(() => onSalvo())

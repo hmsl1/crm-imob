@@ -7,6 +7,11 @@ import {
   CHAVE_NOME_RESPONSAVEL,
   CHAVE_CRECI,
   CHAVE_EMAIL_CONTATO,
+  CHAVE_TAGLINE_SITE,
+  CHAVE_SOBRE_EMPRESA,
+  CHAVE_INSTAGRAM_HANDLE,
+  CHAVE_VIDEOS_SITE,
+  CHAVE_HERO_IMAGEM_URL,
   validarWhatsapp,
   formatarWhatsapp,
   validarNomeResponsavel,
@@ -14,8 +19,21 @@ import {
   validarEmailContato,
 } from '../lib/configuracoes.js'
 import { digitosWhatsapp } from '../lib/format.js'
+import { enviarFoto } from '../lib/imagens.js'
 import { validarNovaSenha, traduzirErroAuth } from '../lib/senha.js'
 import { useFechamentoAnimado } from '../lib/useFechamentoAnimado.js'
+
+const CHAVES_SITE = [
+  CHAVE_WHATSAPP_VITRINE,
+  CHAVE_NOME_RESPONSAVEL,
+  CHAVE_CRECI,
+  CHAVE_EMAIL_CONTATO,
+  CHAVE_TAGLINE_SITE,
+  CHAVE_SOBRE_EMPRESA,
+  CHAVE_INSTAGRAM_HANDLE,
+  CHAVE_VIDEOS_SITE,
+  CHAVE_HERO_IMAGEM_URL,
+]
 
 // "Meu perfil": define o nome do corretor desta conta
 export default function PerfilModal({ usuario, nomeAtual, onFechar }) {
@@ -35,6 +53,12 @@ export default function PerfilModal({ usuario, nomeAtual, onFechar }) {
   const [erroSite, setErroSite] = useState('')
   const [avisoSite, setAvisoSite] = useState('')
   const [salvandoSite, setSalvandoSite] = useState(false)
+  const [taglineSite, setTaglineSite] = useState('')
+  const [sobreEmpresa, setSobreEmpresa] = useState('')
+  const [instagramHandle, setInstagramHandle] = useState('')
+  const [videosSite, setVideosSite] = useState('')
+  const [heroImagemUrl, setHeroImagemUrl] = useState('')
+  const [enviandoHero, setEnviandoHero] = useState(false)
 
   useEffect(() => {
     if (!dono) return
@@ -42,7 +66,7 @@ export default function PerfilModal({ usuario, nomeAtual, onFechar }) {
     supabase
       .from('configuracoes')
       .select('chave, valor')
-      .in('chave', [CHAVE_WHATSAPP_VITRINE, CHAVE_NOME_RESPONSAVEL, CHAVE_CRECI, CHAVE_EMAIL_CONTATO])
+      .in('chave', CHAVES_SITE)
       .then(({ data }) => {
         if (!ativo || !data) return
         const valor = (chave) => data.find((d) => d.chave === chave)?.valor ?? ''
@@ -50,11 +74,31 @@ export default function PerfilModal({ usuario, nomeAtual, onFechar }) {
         setNomeResponsavel(valor(CHAVE_NOME_RESPONSAVEL))
         setCreci(valor(CHAVE_CRECI))
         setEmailContato(valor(CHAVE_EMAIL_CONTATO))
+        setTaglineSite(valor(CHAVE_TAGLINE_SITE))
+        setSobreEmpresa(valor(CHAVE_SOBRE_EMPRESA))
+        setInstagramHandle(valor(CHAVE_INSTAGRAM_HANDLE))
+        setVideosSite(valor(CHAVE_VIDEOS_SITE))
+        setHeroImagemUrl(valor(CHAVE_HERO_IMAGEM_URL))
       })
     return () => {
       ativo = false
     }
   }, [dono])
+
+  async function enviarImagemCapa(e) {
+    const arquivo = e.target.files?.[0]
+    e.target.value = ''
+    if (!arquivo) return
+    setErroSite('')
+    setEnviandoHero(true)
+    try {
+      const url = await enviarFoto(arquivo, usuario.id)
+      setHeroImagemUrl(url)
+    } catch {
+      setErroSite('Não foi possível enviar a imagem. Tente outro arquivo.')
+    }
+    setEnviandoHero(false)
+  }
 
   async function salvarSite(e) {
     e.preventDefault()
@@ -70,6 +114,11 @@ export default function PerfilModal({ usuario, nomeAtual, onFechar }) {
         { chave: CHAVE_NOME_RESPONSAVEL, valor: nomeResponsavel.trim() },
         { chave: CHAVE_CRECI, valor: creci.trim() },
         { chave: CHAVE_EMAIL_CONTATO, valor: emailContato.trim() },
+        { chave: CHAVE_TAGLINE_SITE, valor: taglineSite.trim() },
+        { chave: CHAVE_SOBRE_EMPRESA, valor: sobreEmpresa.trim() },
+        { chave: CHAVE_INSTAGRAM_HANDLE, valor: instagramHandle.trim().replace(/^@/, '') },
+        { chave: CHAVE_VIDEOS_SITE, valor: videosSite.trim() },
+        { chave: CHAVE_HERO_IMAGEM_URL, valor: heroImagemUrl.trim() },
       ],
       { onConflict: 'chave' }
     )
@@ -188,6 +237,34 @@ export default function PerfilModal({ usuario, nomeAtual, onFechar }) {
               <input type="email" value={emailContato} onChange={(e) => setEmailContato(e.target.value)} />
             </label>
             <p className="dica">Nome, CRECI e e-mail aparecem no rodapé do site público.</p>
+
+            <label>
+              Imagem de capa (Início)
+              <input type="file" accept="image/*" onChange={enviarImagemCapa} disabled={enviandoHero} />
+            </label>
+            {enviandoHero && <p className="dica">Enviando imagem…</p>}
+            {heroImagemUrl && (
+              <div className="previa-capa">
+                <img src={heroImagemUrl} alt="Prévia da imagem de capa" />
+              </div>
+            )}
+            <label>
+              Frase de efeito (abaixo da imagem de capa)
+              <input value={taglineSite} onChange={(e) => setTaglineSite(e.target.value)} placeholder="Ex.: O imóvel certo, do jeito certo." />
+            </label>
+            <label>
+              Sobre a empresa (opcional)
+              <textarea rows={3} value={sobreEmpresa} onChange={(e) => setSobreEmpresa(e.target.value)} placeholder="Deixe em branco para não mostrar essa seção na Início" />
+            </label>
+            <label>
+              Instagram (opcional)
+              <input value={instagramHandle} onChange={(e) => setInstagramHandle(e.target.value)} placeholder="Ex.: seuperfil" />
+            </label>
+            <label>
+              Vídeos do YouTube (opcional)
+              <textarea rows={2} value={videosSite} onChange={(e) => setVideosSite(e.target.value)} placeholder={'Uma URL por linha, ex.:\nhttps://youtube.com/watch?v=...'} />
+            </label>
+            <p className="dica">Sobre a empresa, Instagram e vídeos só aparecem no site quando preenchidos.</p>
             {erroSite && <p className="erro">{erroSite}</p>}
             {avisoSite && <p className="aviso">{avisoSite}</p>}
             <div className="acoes">

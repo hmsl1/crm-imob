@@ -26,7 +26,9 @@ import { useFechamentoAnimado } from '../lib/useFechamentoAnimado.js'
 import { lerRascunho, salvarRascunho, limparRascunho, temConteudo } from '../lib/rascunho.js'
 import { acharPorTelefone, contarImoveis } from '../lib/proprietario.js'
 import { hojeISO } from '../lib/datas.js'
+import { gerarDescricaoAutomatica } from '../lib/descricaoAutomatica.js'
 import Opcoes from './Opcoes.jsx'
+import { useConfirmar } from '../lib/confirmacao.jsx'
 
 const NOVO_CORRETOR = '__novo__'
 
@@ -73,6 +75,7 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
   const [recuperadoEm, setRecuperadoEm] = useState(rascunho?.salvoEm ?? null)
   const [salvoAutoEm, setSalvoAutoEm] = useState(null)
   const [arrastandoFoto, setArrastandoFoto] = useState(null)
+  const [arrastandoArquivo, setArrastandoArquivo] = useState(false)
   const [alvoFoto, setAlvoFoto] = useState(null)
   const [novas, setNovas] = useState(rascunho?.novas ?? []) // enviadas e ainda não salvas no imóvel
   const [enviando, setEnviando] = useState(false)
@@ -80,6 +83,7 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
   const [erro, setErro] = useState('')
   const [duplicados, setDuplicados] = useState(null) // imóveis já cadastrados no mesmo endereço
   const { saindo, fechar } = useFechamentoAnimado()
+  const confirmar = useConfirmar()
 
   // Props prontas para os campos (valor + onChange)
   const texto = (nome) => ({
@@ -98,6 +102,16 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
       ...f,
       [chave]: f[chave].includes(id) ? f[chave].filter((x) => x !== id) : [...f[chave], id],
     }))
+
+  async function gerarDescricao() {
+    if (form.comentarios.trim() && !(await confirmar({
+      titulo: 'Substituir os comentários?',
+      mensagem: 'Já existe um texto neste campo. Gerar a descrição automática vai substituí-lo.',
+      textoConfirmar: 'Substituir',
+      perigo: false,
+    }))) return
+    setForm((f) => ({ ...f, comentarios: gerarDescricaoAutomatica(f) }))
+  }
 
   // Salvamento automático do rascunho (só em novo imóvel), logo após cada alteração
   useEffect(() => {
@@ -194,6 +208,18 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
   async function adicionarFotos(e) {
     const arquivos = [...e.target.files]
     e.target.value = ''
+    await processarArquivos(arquivos)
+  }
+
+  // Soltar arquivos arrastados do computador direto na área de fotos (mesma regra do botão "+ Adicionar fotos")
+  function soltarArquivos(e) {
+    e.preventDefault()
+    setArrastandoArquivo(false)
+    const arquivos = [...e.dataTransfer.files].filter((a) => a.type.startsWith('image/'))
+    if (arquivos.length > 0) processarArquivos(arquivos)
+  }
+
+  async function processarArquivos(arquivos) {
     if (arquivos.length === 0) return
 
     const vagas = MAX_FOTOS - fotos.length
@@ -208,7 +234,7 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
     const falhas = []
     for (const arquivo of arquivos.slice(0, vagas)) {
       try {
-        urls.push(await enviarFoto(arquivo, usuario.id))
+        urls.push(await enviarFoto(arquivo, usuario.id, { marcaDagua: true }))
       } catch (err) {
         falhas.push(`${arquivo.name}: ${err.message}`)
       }
@@ -240,8 +266,13 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
     setFotos((f) => [url, ...f.filter((u) => u !== url)])
   }
 
-  function descartarRascunho() {
-    if (!window.confirm('Descartar este cadastro? O que você preencheu e as fotos enviadas serão apagados.')) return
+  async function descartarRascunho() {
+    const ok = await confirmar({
+      titulo: 'Descartar cadastro',
+      mensagem: 'Descartar este cadastro? O que você preencheu e as fotos enviadas serão apagados.',
+      textoConfirmar: 'Descartar',
+    })
+    if (!ok) return
     limparRascunho(usuario.id)
     setForm((f) => ({ ...formDoImovel(null), captador_id: f.captador_id }))
     setRecuperadoEm(null)
@@ -255,7 +286,12 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
   // Fechar (✕, fora da janela ou Cancelar). Em imóvel novo com conteúdo, pede confirmação antes de perder o cadastro.
   async function cancelar() {
     if (!editando && temConteudo(form, fotos)) {
-      if (!window.confirm('Descartar este cadastro? O que você preencheu e as fotos enviadas serão apagados.')) return
+      const ok = await confirmar({
+        titulo: 'Descartar cadastro',
+        mensagem: 'Descartar este cadastro? O que você preencheu e as fotos enviadas serão apagados.',
+        textoConfirmar: 'Descartar',
+      })
+      if (!ok) return
     }
     if (!editando) limparRascunho(usuario.id)
     if (novas.length) await apagarFotos(novas).catch(() => {})
@@ -309,7 +345,12 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
   }
 
   async function excluir() {
-    if (!window.confirm(`Excluir o imóvel "${imovel.titulo}"? As fotos também serão apagadas.`)) return
+    const ok = await confirmar({
+      titulo: 'Excluir imóvel',
+      mensagem: `Excluir o imóvel "${imovel.titulo}"? As fotos também serão apagadas.`,
+      textoConfirmar: 'Excluir',
+    })
+    if (!ok) return
     const { error } = await supabase.from('imoveis').delete().eq('id', imovel.id)
     if (error) {
       setErro(error.message)
@@ -451,6 +492,10 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
                   </label>
                 </div>
                 <label>
+                  Condomínio (opcional)
+                  <input {...texto('nome_condominio')} placeholder="Ex.: Porto Seguro" />
+                </label>
+                <label>
                   Data de captação
                   <input type="date" {...texto('captado_em')} max={hojeISO()} />
                 </label>
@@ -500,11 +545,18 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
                   </label>
                   <label>
                     IPTU (R$)
-                    <input type="number" inputMode="decimal" min="0" step="0.01" {...texto('valor_iptu')} />
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="0.01"
+                      {...texto('valor_iptu')}
+                      disabled={form.sem_iptu}
+                    />
                   </label>
                   <label>
                     IPTU: valor
-                    <select {...texto('iptu_periodo')}>
+                    <select {...texto('iptu_periodo')} disabled={form.sem_iptu}>
                       <Opcoes lista={PERIODOS_IPTU} vazio="Selecione" />
                     </select>
                   </label>
@@ -512,6 +564,10 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
                 <label className="check">
                   <input type="checkbox" {...marca('sem_condominio')} />
                   Imóvel sem condomínio
+                </label>
+                <label className="check">
+                  <input type="checkbox" {...marca('sem_iptu')} />
+                  Imóvel sem IPTU
                 </label>
                 <div className="tres">
                   <label>
@@ -655,9 +711,18 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
 
           {aba === 'fotos' && (
             <>
-              <div className="fotos">
+              <div
+                className={'fotos' + (arrastandoArquivo ? ' arrastando-arquivo' : '')}
+                onDragOver={(e) => {
+                  if (!e.dataTransfer.types.includes('Files')) return
+                  e.preventDefault()
+                  setArrastandoArquivo(true)
+                }}
+                onDragLeave={() => setArrastandoArquivo(false)}
+                onDrop={soltarArquivos}
+              >
                 <span className="rotulo-fotos">
-                  Fotos ({fotos.length}/{MAX_FOTOS}). A primeira é a capa. Arraste ou use as setas para reordenar
+                  Fotos ({fotos.length}/{MAX_FOTOS}). A primeira é a capa. Arraste fotos do computador para cá, ou arraste as miniaturas para reordenar
                 </span>
                 {fotos.length > 0 && (
                   <div className="fotos-grade">
@@ -736,7 +801,12 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
               </div>
 
               <label>
-                Comentários
+                <span className="rotulo-com-acao">
+                  Comentários
+                  <button type="button" className="link gerar-descricao" onClick={gerarDescricao}>
+                    ✨ Gerar descrição automática
+                  </button>
+                </span>
                 <textarea rows={6} {...texto('comentarios')} placeholder="Observações livres sobre o imóvel" />
               </label>
             </>

@@ -6,9 +6,11 @@ import AreaLogada from './components/AreaLogada.jsx'
 import NovaSenha from './components/NovaSenha.jsx'
 import { abriuPorRecuperacao } from './lib/senha.js'
 import { useRota } from './lib/useRota.js'
+import Inicio from './components/Inicio.jsx'
 import Vitrine from './components/Vitrine.jsx'
 import VitrineImovel from './components/VitrineImovel.jsx'
-import Anuncie from './components/Anuncie.jsx'
+import Contato from './components/Contato.jsx'
+import { ConfirmacaoProvider } from './lib/confirmacao.jsx'
 
 export default function App() {
   const { rota, navegar } = useRota()
@@ -24,6 +26,22 @@ export default function App() {
   }, [rota.pagina])
 
   useEffect(() => () => clearTimeout(timerPagina.current), [])
+
+  // Sem isso, se o usuário soltar um arquivo um pixel fora da área de upload de fotos (muito fácil
+  // de acontecer na prática), o navegador abre a imagem em branco por cima do site inteiro. Isso
+  // garante que um arquivo arrastado só faz algo se uma área de soltar específica (como a de fotos
+  // do imóvel) realmente tratar o evento.
+  useEffect(() => {
+    function bloquear(e) {
+      e.preventDefault()
+    }
+    window.addEventListener('dragover', bloquear)
+    window.addEventListener('drop', bloquear)
+    return () => {
+      window.removeEventListener('dragover', bloquear)
+      window.removeEventListener('drop', bloquear)
+    }
+  }, [])
 
   useEffect(() => {
     if (!configurado) return
@@ -67,14 +85,19 @@ export default function App() {
 
   // Site público: aberto a qualquer visitante, sem login
   if (rota.pagina !== 'painel') {
-    if (rota.pagina === 'redirecionar') return null // a troca de URL é instantânea (useRota já faz o replace)
     if (rota.pagina === 'imovel') return <VitrineImovel codigo={rota.codigo} navegar={navegar} />
-    if (rota.pagina === 'anuncie') return <Anuncie navegar={navegar} />
-    return <Vitrine navegar={navegar} finalidadeInicial={rota.finalidade} />
+    if (rota.pagina === 'contato') return <Contato navegar={navegar} />
+    // a key força recriar o estado dos filtros quando a URL da busca muda (ex.: veio de "Imóveis por bairro")
+    if (rota.pagina === 'vitrine') return <Vitrine key={JSON.stringify(rota.filtros)} navegar={navegar} filtrosIniciais={rota.filtros} />
+    return <Inicio navegar={navegar} />
   }
 
   if (carregando) return <div className="centro">Carregando…</div>
   if (!sessao) return <Login />
 
-  return <AreaLogada usuario={sessao.user} pagina={pagina} saindoPagina={saindoPagina} onPagina={trocarPagina} />
+  return (
+    <ConfirmacaoProvider>
+      <AreaLogada usuario={sessao.user} pagina={pagina} saindoPagina={saindoPagina} onPagina={trocarPagina} />
+    </ConfirmacaoProvider>
+  )
 }
