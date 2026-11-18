@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase.js'
 import { Suspense, useEffect, useRef, useState } from 'react'
+import { RECURSOS } from '../config.js'
 import Marca from './Marca.jsx'
 import { PerfilModal } from '../componentesPreguicosos.js'
 import { useNomeDoCorretor } from '../lib/corretor.js'
@@ -23,6 +24,7 @@ export default function Topo({ usuario, pagina, onPagina, children }) {
   const [menuAberto, setMenuAberto] = useState(false)
   const menuRef = useRef(null)
   const { avisos } = useAvisos()
+  const atalhoMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform || '')
 
   useEffect(() => {
     if (!menuAberto) return
@@ -55,7 +57,10 @@ export default function Topo({ usuario, pagina, onPagina, children }) {
               aria-label={selo ? `${p.rotulo}. ${resumoDosAvisos(avisos)}` : undefined}
               onClick={() => onPagina(p.id)}
             >
-              {p.rotulo}
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
+                <path d={p.icone} />
+              </svg>
+              <span>{p.rotulo}</span>
               {selo && (
                 // key = total: a cada mudança o selo "pulsa" uma vez
                 <span key={avisos.total} className={'selo-agenda' + (avisos.urgente ? ' urgente' : '')} title={resumoDosAvisos(avisos)} aria-hidden="true">
@@ -68,6 +73,21 @@ export default function Topo({ usuario, pagina, onPagina, children }) {
         })}
       </nav>
       <div className="acoes-topo">{children}</div>
+      {RECURSOS.buscaGlobalCtrlK && (
+        <button
+          type="button"
+          className="btn-busca-global"
+          title="Busca rápida global (Ctrl+K)"
+          aria-label="Busca rápida global"
+          onClick={() => window.dispatchEvent(new CustomEvent('abrir-busca-global'))}
+        >
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.3-4.3" />
+          </svg>
+          <kbd>{atalhoMac ? '⌘K' : 'Ctrl+K'}</kbd>
+        </button>
+      )}
       <div className="menu-usuario" ref={menuRef}>
         <button
           className="link usuario"
