@@ -31,8 +31,9 @@ export const ImovelDetalhes = preguicoso(() => import('./components/ImovelDetalh
 export const CaptacaoRapida = preguicoso(() => import('./components/CaptacaoRapida.jsx'))
 export const Proprietarios = preguicoso(() => import('./components/Proprietarios.jsx'))
 export const PerfilModal = preguicoso(() => import('./components/PerfilModal.jsx'))
+export const BuscaGlobalModal = preguicoso(() => import('./components/BuscaGlobalModal.jsx'))
 
-const TODOS_CRM = [Imoveis, Proprietarios, CaptacaoRapida, Agenda, MetasModal, EtapaModal, LeadModal, ImovelDetalhes, ImovelModal, PerfilModal]
+const TODOS_CRM = [Imoveis, Proprietarios, CaptacaoRapida, Agenda, MetasModal, EtapaModal, LeadModal, ImovelDetalhes, ImovelModal, PerfilModal, BuscaGlobalModal]
 const TODOS_PUBLICO = [Inicio, Vitrine, VitrineImovel, Contato]
 
 function agendarQuandoOcioso(fn) {

@@ -4,6 +4,7 @@ import { TIPOS_IMOVEL, STATUS_IMOVEL, FINALIDADES, atendeFinalidade } from '../l
 import { precosDoImovel } from '../lib/format.js'
 import { bairrosDosImoveis, atendeBairro } from '../lib/bairros.js'
 import { useNomeDoCorretor } from '../lib/corretor.js'
+import { lerCache, gravarCache } from '../lib/cache.js'
 import Topo from './Topo.jsx'
 import { ImovelModal, ImovelDetalhes, CaptacaoRapida } from '../componentesPreguicosos.js'
 import { situacaoExclusividade } from '../lib/exclusividade.js'
@@ -15,11 +16,11 @@ const rotulo = (lista, id) => lista.find((i) => i.id === id)?.rotulo ?? id
 // No filtro só "Venda" e "Aluguel": cada um já inclui os imóveis de "Venda e aluguel"
 const FINALIDADES_FILTRO = FINALIDADES.filter((f) => f.id !== 'venda_aluguel')
 
-export default function Imoveis({ usuario, pagina, onPagina }) {
+export default function Imoveis({ usuario, pagina, onPagina, abrirImovelId = null, onLimparAlvo }) {
   const { nome: nomeCorretor } = useNomeDoCorretor(usuario)
-  const [imoveis, setImoveis] = useState([])
-  const [corretores, setCorretores] = useState([])
-  const [carregando, setCarregando] = useState(true)
+  const [imoveis, setImoveis] = useState(() => lerCache('crm:imoveis') ?? [])
+  const [corretores, setCorretores] = useState(() => lerCache('crm:corretores') ?? [])
+  const [carregando, setCarregando] = useState(() => !lerCache('crm:imoveis'))
   const [erro, setErro] = useState('')
   const [busca, setBusca] = useState('')
   const [tipo, setTipo] = useState('')
@@ -51,6 +52,8 @@ export default function Imoveis({ usuario, pagina, onPagina }) {
     setErro('')
     setImoveis(resImoveis.data)
     setCorretores(resCorretores.data ?? [])
+    gravarCache('crm:imoveis', resImoveis.data)
+    gravarCache('crm:corretores', resCorretores.data ?? [])
     return resImoveis.data
   }, [])
 
@@ -60,6 +63,16 @@ export default function Imoveis({ usuario, pagina, onPagina }) {
     window.addEventListener('corretor-atualizado', carregar)
     return () => window.removeEventListener('corretor-atualizado', carregar)
   }, [carregar])
+
+  // Abertura direta vinda da busca global (Ctrl+K)
+  useEffect(() => {
+    if (!abrirImovelId || imoveis.length === 0) return
+    if (imoveis.some((i) => i.id === abrirImovelId)) {
+      setAbaDetalhe('principal')
+      setAberto({ modo: 'ver', id: abrirImovelId })
+    }
+    onLimparAlvo?.()
+  }, [abrirImovelId, imoveis, onLimparAlvo])
 
   const bairros = useMemo(() => bairrosDosImoveis(imoveis), [imoveis])
   // se o bairro escolhido deixou de existir (imóvel editado ou excluído), volta para "todos"
@@ -254,7 +267,13 @@ export default function Imoveis({ usuario, pagina, onPagina }) {
           // sem argumento: abre o formulário na mesma aba que você estava vendo; com "fotos": direto nas fotos
           onEditar={(aba) => setAberto({ modo: 'editar', id: imovelAberto.id, aba: typeof aba === 'string' ? aba : abaDetalhe })}
           // edição de um campo: atualiza só esse imóvel na lista, sem recarregar tudo
-          onAtualizado={(atualizado) => setImoveis((lista) => lista.map((i) => (i.id === atualizado.id ? atualizado : i)))}
+          onAtualizado={(atualizado) =>
+            setImoveis((lista) => {
+              const nova = lista.map((i) => (i.id === atualizado.id ? atualizado : i))
+              gravarCache('crm:imoveis', nova)
+              return nova
+            })
+          }
         />
       )}
 
