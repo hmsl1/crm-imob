@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
-import { linkInicio, linkVitrine, linkContato } from '../lib/rota.js'
+import { RECURSOS } from '../config.js'
+import { linkInicio, linkVitrine, linkContato, linkBuscaImoveis } from '../lib/rota.js'
 import { useContatoSite } from '../lib/useContatoSite.js'
+import { useFavoritos } from '../lib/favoritos.js'
 import { linkWhatsapp, telefoneExibicao } from '../lib/format.js'
 import Marca from './Marca.jsx'
 
@@ -10,6 +12,7 @@ export function SiteTopo({ navegar, paginaAtiva = '', onAnuncie }) {
   const [scrolled, setScrolled] = useState(false)
   const [menuAberto, setMenuAberto] = useState(false)
   const contato = useContatoSite()
+  const { favoritos } = useFavoritos()
 
   useEffect(() => {
     // Limites diferentes pra ligar (28px) e desligar (12px): evita entrar/sair do estado
@@ -27,6 +30,9 @@ export function SiteTopo({ navegar, paginaAtiva = '', onAnuncie }) {
     setMenuAberto(false)
     navegar(destino)
   }
+
+  const linkFavs = linkBuscaImoveis({ soFavoritos: true })
+
   return (
     <header className={'vitrine-topo' + (scrolled ? ' scrolled' : '')}>
       <a className="marca-link" href={linkInicio} onClick={(e) => ir(e, linkInicio)}>
@@ -52,6 +58,11 @@ export function SiteTopo({ navegar, paginaAtiva = '', onAnuncie }) {
         <a href={linkContato} className={paginaAtiva === 'contato' ? 'ativo' : ''} onClick={(e) => ir(e, linkContato)}>
           Contato
         </a>
+        {RECURSOS.favoritosVitrine && favoritos.length > 0 && (
+          <a href={linkFavs} className="link-favoritos-topo" onClick={(e) => ir(e, linkFavs)}>
+            ♥ Favoritos <span className="badge-fav">{favoritos.length}</span>
+          </a>
+        )}
         <button type="button" className="botao-anuncie" onClick={() => { setMenuAberto(false); onAnuncie() }}>
           Anuncie seu imóvel
         </button>
@@ -74,16 +85,21 @@ export function SiteTopo({ navegar, paginaAtiva = '', onAnuncie }) {
   )
 }
 
-export function SiteRodape() {
+export function SiteRodape({ navegar }) {
   const contato = useContatoSite()
+  const ir = (e, destino) => {
+    if (!navegar) return
+    e.preventDefault()
+    navegar(destino)
+  }
   return (
     <footer className="vitrine-rodape">
       <div className="rodape-topo">
         <Marca />
         <nav className="rodape-nav">
-          <a href={linkInicio}>Início</a>
-          <a href={linkVitrine}>Imóveis</a>
-          <a href={linkContato}>Contato</a>
+          <a href={linkInicio} onClick={(e) => ir(e, linkInicio)}>Início</a>
+          <a href={linkVitrine} onClick={(e) => ir(e, linkVitrine)}>Imóveis</a>
+          <a href={linkContato} onClick={(e) => ir(e, linkContato)}>Contato</a>
         </nav>
       </div>
       <div className="rodape-identidade">

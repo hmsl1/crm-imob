@@ -1,21 +1,27 @@
 import { useMemo } from 'react'
+import { RECURSOS } from '../config.js'
 import { TIPOS_IMOVEL } from '../lib/imovel.js'
 import { bairrosDosImoveis } from '../lib/bairros.js'
 import { opcoesDoCampo } from '../lib/opcoesImoveis.js'
-import { buscaEhCodigo } from '../lib/vitrine.js'
+import { CHIPS_FILTRO_VITRINE, buscaEhCodigo } from '../lib/vitrine.js'
 
-// Barra de busca da vitrine (tipo, cidade, bairro, condomínio, valor e código/palavra), usada tanto
-// na Início (leva para /imoveis com os filtros na URL) quanto na página Imóveis (filtra na hora).
-// "imoveis" é a lista já carregada: as opções de cidade/bairro/condomínio vêm dela, não são fixas.
+// Barra de busca da vitrine (tipo, cidade, bairro, condomínio, dormitórios, vagas, chips, valor e código),
+// usada tanto na Início (leva para /imoveis com os filtros na URL) quanto na página Imóveis (filtra na hora).
 export default function BuscaImoveis({ imoveis, valores, aoMudar, aoBuscar }) {
   const cidades = useMemo(() => opcoesDoCampo(imoveis, 'cidade'), [imoveis])
   const bairros = useMemo(() => bairrosDosImoveis(imoveis), [imoveis])
   const condominios = useMemo(() => opcoesDoCampo(imoveis, 'nome_condominio'), [imoveis])
 
   const campo = (nome) => ({
-    value: valores[nome],
+    value: valores[nome] ?? '',
     onChange: (e) => aoMudar(nome, e.target.value),
   })
+
+  const chipsAtivos = Array.isArray(valores.caracteristicas) ? valores.caracteristicas : []
+  const alternarChip = (id) => {
+    const proximos = chipsAtivos.includes(id) ? chipsAtivos.filter((c) => c !== id) : [...chipsAtivos, id]
+    aoMudar('caracteristicas', proximos)
+  }
 
   return (
     <form
@@ -74,9 +80,46 @@ export default function BuscaImoveis({ imoveis, valores, aoMudar, aoBuscar }) {
             ))}
           </select>
         )}
+        {RECURSOS.filtrosAvancadosVitrine && (
+          <>
+            <select aria-label="Mínimo de dormitórios" {...campo('quartosMin')}>
+              <option value="">Dormitórios</option>
+              <option value="1">1+ dorms</option>
+              <option value="2">2+ dorms</option>
+              <option value="3">3+ dorms</option>
+              <option value="4">4+ dorms</option>
+            </select>
+            <select aria-label="Mínimo de vagas" {...campo('vagasMin')}>
+              <option value="">Vagas</option>
+              <option value="1">1+ vaga</option>
+              <option value="2">2+ vagas</option>
+              <option value="3">3+ vagas</option>
+            </select>
+          </>
+        )}
         <input type="number" min="0" placeholder="Valor mínimo" aria-label="Valor mínimo" {...campo('valorMin')} />
         <input type="number" min="0" placeholder="Valor máximo" aria-label="Valor máximo" {...campo('valorMax')} />
       </div>
+
+      {RECURSOS.filtrosAvancadosVitrine && (
+        <div className="chips-filtro" role="group" aria-label="Destaques rápidos">
+          {CHIPS_FILTRO_VITRINE.map((chip) => {
+            const ativo = chipsAtivos.includes(chip.id)
+            return (
+              <button
+                key={chip.id}
+                type="button"
+                className={'chip-filtro' + (ativo ? ' ativo' : '')}
+                aria-pressed={ativo}
+                onClick={() => alternarChip(chip.id)}
+              >
+                {chip.rotulo}
+              </button>
+            )
+          })}
+        </div>
+      )}
+
       <button type="submit" className="primario busca-botao">
         Buscar
       </button>

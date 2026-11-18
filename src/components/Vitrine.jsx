@@ -1,21 +1,37 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { RECURSOS } from '../config.js'
 import { useVitrineImoveis } from '../lib/useVitrineImoveis.js'
-import { TIPOS_IMOVEL } from '../lib/imovel.js'
-import { precosDoImovel } from '../lib/format.js'
+import { useContatoSite } from '../lib/useContatoSite.js'
+import { useFavoritos, mensagemFavoritos } from '../lib/favoritos.js'
+import { linkWhatsapp } from '../lib/format.js'
 import { atendeBairro } from '../lib/bairros.js'
 import { filtrarVitrine, buscaEhCodigo } from '../lib/vitrine.js'
-import { linkImovel } from '../lib/rota.js'
-import { CaracteristicasImovel } from './IconesImovel.jsx'
+import { linkImovel, linkBuscaImoveis } from '../lib/rota.js'
 import BuscaImoveis from './BuscaImoveis.jsx'
 import LayoutPublico from './LayoutPublico.jsx'
+import CardImovel from './CardImovel.jsx'
+import { EsqueletoGrade } from './Esqueleto.jsx'
 
-const rotulo = (lista, id) => lista.find((i) => i.id === id)?.rotulo ?? id
-const FILTROS_VAZIOS = { busca: '', tipo: '', finalidade: '', cidade: '', bairro: '', condominio: '', valorMin: '', valorMax: '' }
+const FILTROS_VAZIOS = {
+  busca: '',
+  tipo: '',
+  finalidade: '',
+  cidade: '',
+  bairro: '',
+  condominio: '',
+  valorMin: '',
+  valorMax: '',
+  quartosMin: '',
+  vagasMin: '',
+  caracteristicas: [],
+  soFavoritos: false,
+}
 
-// Página "Imóveis": lista todos os imóveis disponíveis, com busca e filtros. Os filtros podem já
-// vir preenchidos pela URL (ex.: vindos da busca da Início ou de um "Imóveis por bairro").
+// Página "Imóveis": lista todos os imóveis disponíveis, com busca, filtros avançados e favoritos.
 export default function Vitrine({ navegar, filtrosIniciais = {} }) {
   const { imoveis, carregando, erro } = useVitrineImoveis()
+  const { favoritos } = useFavoritos()
+  const contato = useContatoSite()
   const [filtros, setFiltros] = useState({ ...FILTROS_VAZIOS, ...filtrosIniciais })
 
   useEffect(() => {
@@ -28,82 +44,112 @@ export default function Vitrine({ navegar, filtrosIniciais = {} }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assinaturaIniciais])
 
+  const atualizarFiltro = useCallback((campo, valor) => {
+    setFiltros((prev) => {
+      const proximos = { ...prev, [campo]: valor }
+      const destino = linkBuscaImoveis(proximos)
+      if (destino !== window.location.pathname + window.location.search) {
+        window.history.replaceState({}, '', destino)
+      }
+      return proximos
+    })
+  }, [])
+
+  const limparFiltros = useCallback(() => {
+    setFiltros(FILTROS_VAZIOS)
+    window.history.replaceState({}, '', linkBuscaImoveis(FILTROS_VAZIOS))
+  }, [])
+
   const filtrados = useMemo(
-    () => filtrarVitrine(imoveis, filtros).filter((i) => atendeBairro(i, filtros.bairro)),
-    [imoveis, filtros]
+    () => filtrarVitrine(imoveis, filtros, favoritos).filter((i) => atendeBairro(i, filtros.bairro)),
+    [imoveis, filtros, favoritos]
   )
-  const filtrando = Object.values(filtros).some(Boolean)
+
+  const filtrando = Boolean(
+    filtros.busca ||
+      filtros.tipo ||
+      filtros.finalidade ||
+      filtros.cidade ||
+      filtros.bairro ||
+      filtros.condominio ||
+      filtros.valorMin ||
+      filtros.valorMax ||
+      filtros.quartosMin ||
+      filtros.vagasMin ||
+      filtros.soFavoritos ||
+      filtros.caracteristicas?.length > 0
+  )
+
+  const imoveisFavoritos = useMemo(
+    () => imoveis.filter((i) => favoritos.includes(i.codigo)),
+    [imoveis, favoritos]
+  )
+  const linkEnviarFavoritos = contato?.whatsapp && imoveisFavoritos.length > 0
+    ? linkWhatsapp(contato.whatsapp, mensagemFavoritos(imoveisFavoritos))
+    : null
 
   const abrir = useCallback((codigo) => navegar(linkImovel(codigo)), [navegar])
 
   return (
     <LayoutPublico navegar={navegar} paginaAtiva="vitrine">
       <section className="vitrine-busca">
-        <h1>Encontre o seu imóvel</h1>
-        <BuscaImoveis imoveis={imoveis} valores={filtros} aoMudar={(campo, valor) => setFiltros((f) => ({ ...f, [campo]: valor }))} aoBuscar={() => {}} />
+        <h1>{filtros.soFavoritos ? 'Meus imóveis favoritos' : 'Encontre o seu imóvel'}</h1>
+        <BuscaImoveis imoveis={imoveis} valores={filtros} aoMudar={atualizarFiltro} aoBuscar={() => {}} />
         {buscaEhCodigo(filtros.busca) && <p className="dica-busca">Buscando pelo código {filtros.busca.toUpperCase()}</p>}
       </section>
 
-      <div className="contagem-filtro faixa">
-        {filtrados.length} {filtrados.length === 1 ? 'imóvel' : 'imóveis'}
+      <div className="barra-vitrine">
+        <span className="contagem-vitrine">
+          {filtrados.length} {filtrados.length === 1 ? 'imóvel' : 'imóveis'}
+        </span>
+        <div className="acoes-barra-vitrine">
+          {RECURSOS.favoritosVitrine && (favoritos.length > 0 || filtros.soFavoritos) && (
+            <button
+              type="button"
+              className={'chip-filtro' + (filtros.soFavoritos ? ' ativo' : '')}
+              aria-pressed={filtros.soFavoritos}
+              onClick={() => atualizarFiltro('soFavoritos', !filtros.soFavoritos)}
+            >
+              ♥ Meus favoritos ({favoritos.length})
+            </button>
+          )}
+          {filtrando && (
+            <button type="button" className="link pequeno" onClick={limparFiltros}>
+              Limpar filtros
+            </button>
+          )}
+          {RECURSOS.favoritosVitrine && linkEnviarFavoritos && (
+            <a className="btn-whatsapp" href={linkEnviarFavoritos} target="_blank" rel="noreferrer">
+              Enviar favoritos no WhatsApp
+            </a>
+          )}
+        </div>
       </div>
 
       {erro && <p className="erro faixa">{erro}</p>}
 
-      {carregando ? (
-        <div className="centro">Carregando imóveis…</div>
+      {carregando && imoveis.length === 0 ? (
+        <EsqueletoGrade itens={6} />
       ) : filtrados.length === 0 ? (
         <div className="vazio-grande">
-          <p>{filtrando ? 'Nenhum imóvel com esses filtros.' : 'Nenhum imóvel disponível no momento.'}</p>
+          <p>
+            {filtros.soFavoritos
+              ? 'Você ainda não salvou nenhum imóvel nos favoritos.'
+              : filtrando
+                ? 'Nenhum imóvel com esses filtros.'
+                : 'Nenhum imóvel disponível no momento.'}
+          </p>
+          {filtrando && (
+            <button type="button" className="primario" onClick={limparFiltros}>
+              Ver todos os imóveis
+            </button>
+          )}
         </div>
       ) : (
         <main className="grade-imoveis">
-          {filtrados.map((i) => {
-            const precos = precosDoImovel(i)
-            return (
-              <article
-                key={i.id}
-                className="imovel"
-                tabIndex={0}
-                onClick={() => abrir(i.codigo)}
-                onKeyDown={(e) => e.key === 'Enter' && abrir(i.codigo)}
-              >
-                <div className="foto">
-                  {i.nome_condominio && <span className="selo-condominio">{i.nome_condominio}</span>}
-                  {i.foto_capa ? (
-                    <img src={i.foto_capa} alt={i.titulo} loading="lazy" decoding="async" />
-                  ) : (
-                    <span>Sem foto</span>
-                  )}
-                  {i.total_fotos > 1 && <span className="selo-fotos">{i.total_fotos} fotos</span>}
-                </div>
-                <div className="corpo">
-                  <span className="codigo-imovel">{i.codigo}</span>
-                  <strong>{i.titulo}</strong>
-                  <span className="detalhes">
-                    {[rotulo(TIPOS_IMOVEL, i.tipo), i.nome_condominio, i.bairro, i.cidade].filter(Boolean).join(' · ')}
-                  </span>
-                  <CaracteristicasImovel imovel={i} />
-                  <div className="corpo-divisoria" />
-                  <div className="corpo-rodape">
-                    {precos.length === 0 ? (
-                      <span className="preco">
-                        <small>Consulte o valor</small>
-                      </span>
-                    ) : (
-                      precos.map((p) => (
-                        <span className="preco" key={p.id}>
-                          {precos.length > 1 && <small>{p.rotulo} </small>}
-                          {p.texto}
-                        </span>
-                      ))
-                    )}
-                    <span className="link ver-detalhes">Ver detalhes →</span>
-                  </div>
-                </div>
-              </article>
-            )
-          })}
+          {filtrados.map((i, idx) => (
+            <CardImovel key={i.id} imovel={i} mostrarTipo prioridadeFoto={idx < 3} onAbrir={abrir} />
+          ))}
         </main>
       )}
     </LayoutPublico>
