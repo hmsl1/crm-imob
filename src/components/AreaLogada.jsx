@@ -7,7 +7,7 @@ import { AvisosContexto } from '../lib/avisosContexto.js'
 import { useAvisosAgenda } from '../lib/useAvisosAgenda.js'
 
 // Tudo o que aparece depois do login: a página atual, o selo de avisos no menu e a janelinha de hoje.
-export default function AreaLogada({ usuario, pagina, saindoPagina, onPagina }) {
+export default function AreaLogada({ usuario, pagina, onPagina }) {
   const { avisos, carregado, recarregar } = useAvisosAgenda(usuario)
   const valor = useMemo(() => ({ avisos, recarregar }), [avisos, recarregar])
 
@@ -23,7 +23,7 @@ export default function AreaLogada({ usuario, pagina, saindoPagina, onPagina }) 
   const props = { usuario, pagina, onPagina }
   return (
     <AvisosContexto.Provider value={valor}>
-      <div className={'pagina' + (saindoPagina ? ' saindo' : '')}>
+      <div className="pagina">
         <Suspense fallback={<div className="centro">Carregando…</div>}>
           {pagina === 'imoveis' ? <Imoveis {...props} /> : pagina === 'proprietarios' ? <Proprietarios {...props} /> : pagina === 'agenda' ? <Agenda {...props} /> : pagina === 'dashboard' ? <Dashboard {...props} /> : <Kanban {...props} />}
         </Suspense>

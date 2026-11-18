@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { supabase } from '../lib/supabase.js'
+import { useVitrineImoveis } from '../lib/useVitrineImoveis.js'
 import { TIPOS_IMOVEL } from '../lib/imovel.js'
 import { precosDoImovel } from '../lib/format.js'
 import { atendeBairro } from '../lib/bairros.js'
@@ -15,31 +15,18 @@ const FILTROS_VAZIOS = { busca: '', tipo: '', finalidade: '', cidade: '', bairro
 // Página "Imóveis": lista todos os imóveis disponíveis, com busca e filtros. Os filtros podem já
 // vir preenchidos pela URL (ex.: vindos da busca da Início ou de um "Imóveis por bairro").
 export default function Vitrine({ navegar, filtrosIniciais = {} }) {
-  const [imoveis, setImoveis] = useState([])
-  const [carregando, setCarregando] = useState(true)
-  const [erro, setErro] = useState('')
+  const { imoveis, carregando, erro } = useVitrineImoveis()
   const [filtros, setFiltros] = useState({ ...FILTROS_VAZIOS, ...filtrosIniciais })
 
   useEffect(() => {
     document.title = 'CRZ Imóveis'
   }, [])
 
+  const assinaturaIniciais = JSON.stringify(filtrosIniciais)
   useEffect(() => {
-    let ativo = true
-    supabase
-      .from('vitrine_imoveis')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .then(({ data, error }) => {
-        if (!ativo) return
-        setCarregando(false)
-        setErro(error ? 'Não foi possível carregar os imóveis agora.' : '')
-        setImoveis(data ?? [])
-      })
-    return () => {
-      ativo = false
-    }
-  }, [])
+    setFiltros({ ...FILTROS_VAZIOS, ...filtrosIniciais })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assinaturaIniciais])
 
   const filtrados = useMemo(
     () => filtrarVitrine(imoveis, filtros).filter((i) => atendeBairro(i, filtros.bairro)),
