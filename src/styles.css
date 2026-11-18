@@ -1313,3 +1313,318 @@ button.primario.busca-botao:hover:not(:disabled) { background: var(--v-painel-ve
 @media (prefers-reduced-motion: reduce) {
   .imovel-rico .foto img { transition: none; }
 }
+
+/* =====================================================================
+   Vitrine Imóvel: Galeria Bento, Lightbox, 2 Colunas e Simulador (Passo 5)
+   ===================================================================== */
+.vitrine-imovel-largo {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.galeria-bento {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 8px;
+  height: 430px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--borda);
+  background: var(--superficie);
+}
+.bento-principal, .bento-item {
+  border: none;
+  padding: 0;
+  border-radius: 0;
+  overflow: hidden;
+  background: var(--bg);
+  position: relative;
+  height: 100%;
+  min-height: 0;
+}
+.bento-principal img, .bento-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.35s ease, filter 0.2s ease;
+}
+.bento-principal:hover img, .bento-item:hover img {
+  transform: scale(1.03);
+  filter: brightness(0.95);
+}
+.bento-secundarias {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 8px;
+  height: 100%;
+  min-height: 0;
+}
+.bento-ver-todas {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--texto);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+}
+.bento-ver-todas:hover:not(:disabled) { background: #fff; }
+.galeria-bento-mobile { display: none; }
+.galeria-vitrine .galeria-principal { cursor: pointer; }
+
+@media (max-width: 720px) {
+  .galeria-bento { display: none; }
+  .galeria-bento-mobile { display: block; }
+}
+
+.imovel-layout-duas-colunas {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 28px;
+  align-items: start;
+}
+.imovel-conteudo-principal {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+.imovel-coluna-unica {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.resumo-specs-imovel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  padding: 14px 16px;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: 12px;
+}
+.resumo-specs-imovel > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 72px;
+}
+.resumo-specs-imovel strong { font-size: 1.08rem; color: var(--texto); }
+.resumo-specs-imovel span { font-size: 0.78rem; color: var(--suave); }
+
+.imovel-sidebar {
+  position: sticky;
+  top: 90px;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 10px 30px -16px rgba(var(--sombra), 0.25);
+}
+.sidebar-precos {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sidebar-precos .valor {
+  font-size: 1.55rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+.sidebar-precos .valor small {
+  display: block;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--suave);
+  font-weight: 600;
+}
+.sidebar-precos .etiqueta { align-self: flex-start; margin-top: 2px; }
+
+.encargos-lista {
+  margin: 0;
+  padding: 10px 0;
+  border-top: 1px solid var(--borda);
+  border-bottom: 1px solid var(--borda);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+.encargos-lista > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.encargos-lista dt { color: var(--suave); }
+.encargos-lista dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+.encargos-lista .pacote-total {
+  padding-top: 6px;
+  margin-top: 2px;
+  border-top: 1px dashed var(--borda);
+  color: var(--texto);
+}
+.encargos-lista .pacote-total dt { color: var(--texto); font-weight: 600; }
+
+.botao-secundario-sidebar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 44px;
+  padding: 8px 14px;
+  border-radius: var(--raio);
+  border: 1.5px solid var(--v-painel-verde, var(--acento));
+  color: var(--v-painel-verde, var(--acento));
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.botao-secundario-sidebar:hover {
+  background: var(--v-painel-verde, var(--acento));
+  color: var(--v-painel-creme, var(--sobre-primario));
+}
+
+.acoes-sidebar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.acoes-sidebar button.fav-ativo {
+  border-color: #b03a2e;
+  color: #b03a2e;
+  background: color-mix(in srgb, #b03a2e 10%, var(--superficie));
+}
+
+@media (max-width: 860px) {
+  .imovel-layout-duas-colunas {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+  .imovel-sidebar { position: static; }
+}
+
+.simulador-caixa {
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.simulador-topo { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.simulador-topo h3 { margin: 0; }
+.simulador-controles label { margin-bottom: 8px; }
+.simulador-controles input[type="range"] {
+  padding: 0;
+  border: none;
+  background: transparent;
+  accent-color: var(--v-painel-verde, var(--acento));
+  cursor: pointer;
+}
+.simulador-resultados {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  padding: 12px;
+  border-radius: var(--raio);
+  background: var(--bg);
+  border: 1px solid var(--borda);
+}
+.simulador-resultados > div { display: flex; flex-direction: column; gap: 2px; }
+.simulador-resultados small { font-size: 0.74rem; color: var(--suave); }
+.simulador-resultados strong { font-size: 1.05rem; font-variant-numeric: tabular-nums; color: var(--texto); }
+.dica-simulador { margin: 0; font-size: 0.76rem; color: var(--suave); }
+.simulador-caixa .btn-whatsapp { align-self: flex-start; padding: 6px 14px; }
+@media (max-width: 560px) {
+  .simulador-resultados { grid-template-columns: 1fr; }
+}
+
+.secao-semelhantes { border-top: 1px solid var(--borda); margin-top: 12px; padding-top: 28px; }
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(15, 22, 20, 0.94);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 14px 16px;
+  animation: fundo-entra 0.18s ease-out both;
+}
+.lightbox-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.9rem;
+}
+.lightbox-fechar {
+  background: rgba(255, 255, 255, 0.14);
+  border: none;
+  color: #fff;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  font-size: 1.1rem;
+  display: grid;
+  place-items: center;
+}
+.lightbox-fechar:hover:not(:disabled) { background: rgba(255, 255, 255, 0.28); }
+.lightbox-palco {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  padding: 8px 44px;
+  touch-action: pan-y;
+}
+.lightbox-palco img {
+  max-width: 100%;
+  max-height: 76vh;
+  object-fit: contain;
+  border-radius: 8px;
+}
+.lightbox-miniaturas {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 8px 4px 2px;
+}
+.lightbox-miniaturas button {
+  flex: 0 0 auto;
+  width: 66px;
+  height: 50px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  overflow: hidden;
+  background: none;
+  opacity: 0.55;
+}
+.lightbox-miniaturas button.ativa { border-color: #fff; opacity: 1; }
+.lightbox-miniaturas img { width: 100%; height: 100%; object-fit: cover; display: block; }
+@media (max-width: 640px) {
+  .lightbox-palco { padding: 8px 0; }
+}
