@@ -1760,3 +1760,81 @@ button.kpi-card:hover {
 .busca-global-item:hover:not(:disabled) {
   background: color-mix(in srgb, var(--acento) 10%, var(--bg));
 }
+
+/* =====================================================================
+   Ferramentas Comerciais: Destaque capa, Match, Relatório e Mídia (Passo 7)
+   ===================================================================== */
+.destaque-capa-barra {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin: -6px 0 16px;
+}
+.btn-destaque-capa {
+  border-radius: 999px;
+}
+.btn-destaque-capa.ativo {
+  background: #9e673c;
+  border-color: #9e673c;
+  color: #fff;
+  font-weight: 600;
+}
+
+.relatorio-proprietario {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: var(--raio);
+  background: var(--bg);
+  border: 1px solid var(--borda);
+}
+
+.match-bloco {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--borda);
+}
+.match-topo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 10px;
+}
+.item-match {
+  background: color-mix(in srgb, var(--acento) 4%, var(--superficie));
+}
+.motivos-match {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 3px;
+}
+.secao-match-leads h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.reducao-badge {
+  background: color-mix(in srgb, var(--perigo) 14%, var(--superficie));
+  color: var(--perigo);
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.acoes-midia {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 4px;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+}

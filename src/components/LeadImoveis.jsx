@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
+import { RECURSOS } from '../config.js'
 import { TIPOS_IMOVEL, comCodigo } from '../lib/imovel.js'
 import { precosDoImovel } from '../lib/format.js'
-import { STATUS_VISITA, deInputLocal, quandoCurto, validarVisita } from '../lib/lead.js'
+import { STATUS_VISITA, deInputLocal, quandoCurto, validarVisita, montarMensagem } from '../lib/lead.js'
 import { abrirWhatsapp } from '../lib/whatsapp.js'
-import { montarMensagem } from '../lib/lead.js'
+import { imoveisCompativeisComLead, temCriteriosDeBusca } from '../lib/match.js'
 import Opcoes from './Opcoes.jsx'
 import { useConfirmar } from '../lib/confirmacao.jsx'
 
@@ -19,6 +20,17 @@ export default function LeadImoveis({ lead, corretor, dados, onMudou, onErro, on
 
   const livres = imoveis.filter((i) => !vinculos.some((v) => v.id === i.id))
   const imovelDaVisita = (v) => imoveis.find((i) => i.id === v.imovel_id)
+  const sugestoes = useMemo(
+    () =>
+      RECURSOS.matchInteligente
+        ? imoveisCompativeisComLead(
+            lead,
+            imoveis,
+            vinculos.map((v) => v.id)
+          )
+        : [],
+    [lead, imoveis, vinculos]
+  )
 
   async function executar(promessa) {
     const { error } = await promessa
@@ -114,6 +126,53 @@ export default function LeadImoveis({ lead, corretor, dados, onMudou, onErro, on
             Vincular
           </button>
         </div>
+
+        {RECURSOS.matchInteligente && (
+          <div className="match-bloco">
+            <div className="match-topo">
+              <strong>✨ Sugestões compatíveis com o perfil</strong>
+              {!temCriteriosDeBusca(lead) && (
+                <span className="suave">Preencha o "Perfil de busca" para ver sugestões automáticas.</span>
+              )}
+            </div>
+            {temCriteriosDeBusca(lead) && sugestoes.length === 0 ? (
+              <p className="suave">Nenhum imóvel disponível livre bate exatamente com esse perfil no momento.</p>
+            ) : sugestoes.length > 0 ? (
+              <ul className="itens">
+                {sugestoes.map(({ imovel: i, motivos }) => {
+                  const precos = precosDoImovel(i).map((p) => `${p.rotulo} ${p.texto}`).join(' · ')
+                  return (
+                    <li key={i.id} className="item-match">
+                      <div className="item-info">
+                        <strong>{comCodigo(i)}</strong>
+                        <span className="suave">
+                          {[rotuloTipo(i.tipo), i.bairro, precos].filter(Boolean).join(' · ')}
+                        </span>
+                        <div className="motivos-match">
+                          {motivos.map((m) => (
+                            <span key={m} className="etiqueta">{m}</span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="item-acoes">
+                        <button type="button" className="pequeno" onClick={() => vincular(i.id)}>
+                          Vincular
+                        </button>
+                        <button
+                          type="button"
+                          className="pequeno"
+                          onClick={() => abrirWhatsapp(lead.telefone, montarMensagem('apresentacao', { lead, imovel: i, corretor }))}
+                        >
+                          Apresentar
+                        </button>
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+            ) : null}
+          </div>
+        )}
       </section>
 
       <section className="secao">

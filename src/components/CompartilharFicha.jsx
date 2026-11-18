@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
+import { RECURSOS } from '../config.js'
 import { fichaDoImovel, fichaComFotos } from '../lib/ficha.js'
 import { primeiroNome } from '../lib/lead.js'
 import { abrirWhatsapp, baixarFotos, compartilharComFotos, suportaCompartilharFotos } from '../lib/whatsapp.js'
+import { imprimirFichaPDF, gerarImagemStory } from '../lib/geradorMidia.js'
 import { useFechamentoAnimado } from '../lib/useFechamentoAnimado.js'
 
 const MAX_ANEXOS = 5
@@ -19,6 +21,7 @@ export default function CompartilharFicha({ imovel, corretor, lead = null, onFec
   const [incluirLinks, setIncluirLinks] = useState(true)
   const [arquivos, setArquivos] = useState(null) // null = preparando; [] = indisponível
   const [aviso, setAviso] = useState('')
+  const [gerandoStory, setGerandoStory] = useState(false)
 
   // Baixa as fotos já ao abrir: o navegador só deixa compartilhar logo após o toque do usuário
   useEffect(() => {
@@ -42,6 +45,26 @@ export default function CompartilharFicha({ imovel, corretor, lead = null, onFec
     } catch {
       setAviso('Não foi possível abrir o compartilhamento. Tente "Abrir no WhatsApp".')
     }
+  }
+
+  function gerarPDF() {
+    setAviso('')
+    try {
+      imprimirFichaPDF(imovel, { corretor })
+    } catch (err) {
+      setAviso(err.message)
+    }
+  }
+
+  async function baixarStory() {
+    setAviso('')
+    setGerandoStory(true)
+    try {
+      await gerarImagemStory(imovel, { corretor })
+    } catch {
+      setAviso('Não foi possível gerar a arte para Story.')
+    }
+    setGerandoStory(false)
   }
 
   return (
@@ -71,6 +94,17 @@ export default function CompartilharFicha({ imovel, corretor, lead = null, onFec
         )}
         {fotos.length === 0 && <p className="dica">Este imóvel ainda não tem fotos.</p>}
         {aviso && <p className="erro">{aviso}</p>}
+
+        {RECURSOS.fichaPdfEStories && (
+          <div className="acoes-midia">
+            <button type="button" className="pequeno" onClick={gerarPDF}>
+              📄 Ficha em PDF / Imprimir
+            </button>
+            <button type="button" className="pequeno" disabled={gerandoStory} onClick={baixarStory}>
+              {gerandoStory ? 'Gerando arte…' : '📸 Baixar Arte p/ Story'}
+            </button>
+          </div>
+        )}
 
         <div className="acoes">
           <span className="espaco" />
