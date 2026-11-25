@@ -207,11 +207,11 @@ label.check input { width: auto; }
 }
 .imovel .codigo-imovel {
   display: inline-block; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.03em;
-  color: var(--v-teal); margin-bottom: 2px;
+  color: var(--v-navy); margin-bottom: 2px;
 }
 .imovel .corpo .preco { color: var(--v-navy); font-size: 1.32rem; font-weight: 800; }
 .imovel .corpo .preco small { text-transform: uppercase; letter-spacing: 0.03em; font-size: 0.68rem; display: block; color: var(--suave); font-weight: 700; }
-.imovel .corpo .ver-detalhes { color: var(--v-orange); font-weight: 800; }
+.imovel .corpo .ver-detalhes { color: var(--v-navy); font-weight: 800; }
 .imovel .corpo-divisoria { border-top: 1px solid var(--borda); margin: 10px 0 8px; }
 .imovel .corpo-rodape { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .vitrine .lista-caracteristicas { list-style: none; display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 4px 0 0; padding: 0; color: var(--suave); font-size: 0.86rem; }

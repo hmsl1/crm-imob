@@ -9,6 +9,7 @@ const ROTULO_TIPO = {
   casa: 'Casa',
   terreno: 'Terreno',
   comercial: 'Imóvel comercial',
+  galpao: 'Galpão',
   rural: 'Imóvel rural',
   outro: 'Imóvel',
 }

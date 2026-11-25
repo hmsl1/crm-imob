@@ -7,6 +7,7 @@ export const TIPOS_IMOVEL = [
   { id: 'casa', rotulo: 'Casa' },
   { id: 'terreno', rotulo: 'Terreno' },
   { id: 'comercial', rotulo: 'Comercial' },
+  { id: 'galpao', rotulo: 'Galpão' },
   { id: 'rural', rotulo: 'Rural' },
   { id: 'outro', rotulo: 'Outro' },
 ]

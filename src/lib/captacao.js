@@ -7,6 +7,7 @@ export const TIPOS_CAPTACAO = [
   { id: 'apartamento', rotulo: 'Apartamento' },
   { id: 'terreno', rotulo: 'Terreno' },
   { id: 'comercial', rotulo: 'Comercial' },
+  { id: 'galpao', rotulo: 'Galpão' },
 ]
 
 export const FORM_CAPTACAO_VAZIO = {

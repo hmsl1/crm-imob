@@ -9,6 +9,10 @@ export const MARCA = {
   logo: '/logo.png',
 }
 
+// Domínio oficial e público do site (sem barra no final). Usado para montar URLs absolutas
+// (ex.: no sitemap.xml, gerado no build) — não muda o que o site mostra pros visitantes.
+export const SITE_URL = 'https://crznegociosimobiliarios.com.br'
+
 // Google Tag Manager do site público (vitrine) — dentro dele fica configurado o Google Analytics
 // (GA4) e, no futuro, pixels de tráfego pago (Google Ads, Meta etc.), tudo sem mexer no código.
 // ID do contêiner (começa com "GTM-"), em tagmanager.google.com. Use null para desativar
