@@ -16,6 +16,7 @@ export function rotaDoCaminho(pathname = '/', search = '') {
 
   if (p === PREFIXO_VITRINE) {
     const sp = new URLSearchParams(search)
+    const caracBruto = texto(sp, 'carac')
     return {
       pagina: 'vitrine',
       filtros: {
@@ -27,6 +28,10 @@ export function rotaDoCaminho(pathname = '/', search = '') {
         condominio: texto(sp, 'condominio'),
         valorMin: texto(sp, 'min'),
         valorMax: texto(sp, 'max'),
+        quartosMin: texto(sp, 'quartos'),
+        vagasMin: texto(sp, 'vagas'),
+        caracteristicas: caracBruto ? caracBruto.split(',').filter(Boolean) : [],
+        soFavoritos: sp.get('favoritos') === '1',
       },
     }
   }
@@ -44,11 +49,26 @@ export const linkImovel = (codigo) => `${PREFIXO_VITRINE}/${encodeURIComponent(c
 // Monta "/imoveis?tipo=casa&cidade=..." a partir de um objeto de filtros (ignora campos vazios)
 export function linkBuscaImoveis(filtros = {}) {
   const sp = new URLSearchParams()
-  const mapa = { busca: 'busca', tipo: 'tipo', finalidade: 'f', cidade: 'cidade', bairro: 'bairro', condominio: 'condominio', valorMin: 'min', valorMax: 'max' }
+  const mapa = {
+    busca: 'busca',
+    tipo: 'tipo',
+    finalidade: 'f',
+    cidade: 'cidade',
+    bairro: 'bairro',
+    condominio: 'condominio',
+    valorMin: 'min',
+    valorMax: 'max',
+    quartosMin: 'quartos',
+    vagasMin: 'vagas',
+  }
   for (const [chave, param] of Object.entries(mapa)) {
     const v = filtros[chave]
     if (v) sp.set(param, v)
   }
+  if (Array.isArray(filtros.caracteristicas) && filtros.caracteristicas.length > 0) {
+    sp.set('carac', filtros.caracteristicas.join(','))
+  }
+  if (filtros.soFavoritos) sp.set('favoritos', '1')
   const qs = sp.toString()
   return qs ? `${PREFIXO_VITRINE}?${qs}` : PREFIXO_VITRINE
 }

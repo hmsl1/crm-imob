@@ -7,12 +7,19 @@ export const TIPOS_IMOVEL = [
   { id: 'casa', rotulo: 'Casa' },
   { id: 'terreno', rotulo: 'Terreno' },
   { id: 'comercial', rotulo: 'Comercial' },
+  { id: 'galpao', rotulo: 'Galpão' },
   { id: 'rural', rotulo: 'Rural' },
   { id: 'outro', rotulo: 'Outro' },
 ]
 
 // "CA0001 · Casa no Centro": o código ajuda a achar o imóvel numa lista ou numa conversa
 export const comCodigo = (i) => (i?.codigo ? `${i.codigo} · ${i.titulo}` : (i?.titulo ?? ''))
+
+// Marcação especial gravada em `caracteristicas` para destacar manualmente um imóvel na capa do site
+export const ID_DESTAQUE_SITE = 'destaque_site'
+export const ehDestaqueSite = (imovel) => Array.isArray(imovel?.caracteristicas) && imovel.caracteristicas.includes(ID_DESTAQUE_SITE)
+export const alternarDestaqueLista = (lista = []) =>
+  lista.includes(ID_DESTAQUE_SITE) ? lista.filter((id) => id !== ID_DESTAQUE_SITE) : [...lista, ID_DESTAQUE_SITE]
 
 export const FINALIDADES = [
   { id: 'venda', rotulo: 'Venda' },

@@ -1,31 +1,38 @@
-import { useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { supabase, configurado } from './lib/supabase.js'
-import { MARCA } from './config.js'
-import Login from './components/Login.jsx'
-import AreaLogada from './components/AreaLogada.jsx'
-import NovaSenha from './components/NovaSenha.jsx'
+import { MARCA, RECURSOS } from './config.js'
 import { abriuPorRecuperacao } from './lib/senha.js'
 import { useRota } from './lib/useRota.js'
-import Inicio from './components/Inicio.jsx'
-import Vitrine from './components/Vitrine.jsx'
-import VitrineImovel from './components/VitrineImovel.jsx'
-import Contato from './components/Contato.jsx'
 import { ConfirmacaoProvider } from './lib/confirmacao.jsx'
+import {
+  Inicio,
+  Vitrine,
+  VitrineImovel,
+  Contato,
+  Login,
+  AreaLogada,
+  NovaSenha,
+  precarregarVitrine,
+} from './componentesPreguicosos.js'
 
 export default function App() {
   const { rota, navegar } = useRota()
   const [sessao, setSessao] = useState(null)
   const [carregando, setCarregando] = useState(configurado)
   const [pagina, setPagina] = useState('dashboard') // dashboard | leads | imoveis | agenda
-  const [saindoPagina, setSaindoPagina] = useState(false)
-  const timerPagina = useRef(null)
   const [recuperando, setRecuperando] = useState(abriuPorRecuperacao) // abriu pelo link de "esqueci a senha"
+
+  useEffect(() => {
+    document.documentElement.dataset.tipografia = RECURSOS.tipografiaEditorial ? 'editorial' : 'sistema'
+  }, [])
 
   useEffect(() => {
     if (rota.pagina === 'painel') document.title = MARCA.nome
   }, [rota.pagina])
 
-  useEffect(() => () => clearTimeout(timerPagina.current), [])
+  useEffect(() => {
+    if (rota.pagina !== 'painel') return precarregarVitrine()
+  }, [rota.pagina])
 
   // Sem isso, se o usuário soltar um arquivo um pixel fora da área de upload de fotos (muito fácil
   // de acontecer na prática), o navegador abre a imagem em branco por cima do site inteiro. Isso
@@ -71,33 +78,58 @@ export default function App() {
     )
   }
 
-  // Troca de página: o conteúdo some em fade (140 ms), troca e volta em fade (a barra superior fica parada)
+  // Troca de página imediata, sem atraso artificial de clique (usa View Transitions quando disponível)
   function trocarPagina(nova) {
-    if (nova === pagina || saindoPagina) return
-    setSaindoPagina(true)
-    timerPagina.current = setTimeout(() => {
+    if (nova === pagina) return
+    const reduz = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    if (document.startViewTransition && !reduz) {
+      document.startViewTransition(() => setPagina(nova))
+    } else {
       setPagina(nova)
-      setSaindoPagina(false)
-    }, 140)
+    }
   }
 
-  if (recuperando) return <NovaSenha onConcluido={() => setRecuperando(false)} />
+  const carregandoTela = <div className="centro">Carregando…</div>
 
-  // Site público: aberto a qualquer visitante, sem login
+  if (recuperando) {
+    return (
+      <Suspense fallback={carregandoTela}>
+        <NovaSenha onConcluido={() => setRecuperando(false)} />
+      </Suspense>
+    )
+  }
+
+  // Site público: aberto a qualquer visitante, sem login (bundle isolado do CRM)
   if (rota.pagina !== 'painel') {
-    if (rota.pagina === 'imovel') return <VitrineImovel codigo={rota.codigo} navegar={navegar} />
-    if (rota.pagina === 'contato') return <Contato navegar={navegar} />
-    // a key força recriar o estado dos filtros quando a URL da busca muda (ex.: veio de "Imóveis por bairro")
-    if (rota.pagina === 'vitrine') return <Vitrine key={JSON.stringify(rota.filtros)} navegar={navegar} filtrosIniciais={rota.filtros} />
-    return <Inicio navegar={navegar} />
+    return (
+      <Suspense fallback={carregandoTela}>
+        {rota.pagina === 'imovel' ? (
+          <VitrineImovel codigo={rota.codigo} navegar={navegar} />
+        ) : rota.pagina === 'contato' ? (
+          <Contato navegar={navegar} />
+        ) : rota.pagina === 'vitrine' ? (
+          <Vitrine navegar={navegar} filtrosIniciais={rota.filtros} />
+        ) : (
+          <Inicio navegar={navegar} />
+        )}
+      </Suspense>
+    )
   }
 
-  if (carregando) return <div className="centro">Carregando…</div>
-  if (!sessao) return <Login />
+  if (carregando) return carregandoTela
+  if (!sessao) {
+    return (
+      <Suspense fallback={carregandoTela}>
+        <Login />
+      </Suspense>
+    )
+  }
 
   return (
     <ConfirmacaoProvider>
-      <AreaLogada usuario={sessao.user} pagina={pagina} saindoPagina={saindoPagina} onPagina={trocarPagina} />
+      <Suspense fallback={carregandoTela}>
+        <AreaLogada usuario={sessao.user} pagina={pagina} onPagina={trocarPagina} />
+      </Suspense>
     </ConfirmacaoProvider>
   )
 }

@@ -1,11 +1,17 @@
-import { useEffect, useRef, useState } from 'react'
-import { TIPOS_IMOVEL, FINALIDADES, ABAS_IMOVEL } from '../lib/imovel.js'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { supabase, ETAPAS } from '../lib/supabase.js'
+import { RECURSOS } from '../config.js'
+import { TIPOS_IMOVEL, FINALIDADES, ABAS_IMOVEL, comCodigo, ehDestaqueSite, alternarDestaqueLista } from '../lib/imovel.js'
 import { CAMPOS_POR_ABA } from '../lib/imovelCampos.js'
 import { precosDoImovel } from '../lib/format.js'
+import { primeiroNome, montarMensagem } from '../lib/lead.js'
+import { abrirWhatsapp } from '../lib/whatsapp.js'
+import { reduziuRecentemente } from '../lib/precos.js'
+import { leadsCompativeisComImovel } from '../lib/match.js'
+import { lerCache, invalidarCache } from '../lib/cache.js'
 import { useFechamentoAnimado } from '../lib/useFechamentoAnimado.js'
 import CampoImovel, { BotaoMapa, AlertaExclusividade } from './CampoImovel.jsx'
 import HistoricoPreco from './HistoricoPreco.jsx'
-import { comCodigo } from '../lib/imovel.js'
 import StatusImovel from './StatusImovel.jsx'
 import CompartilharFicha from './CompartilharFicha.jsx'
 
@@ -19,9 +25,15 @@ export default function ImovelDetalhes({ imovel, corretores, corretor = '', exis
   const [editando, setEditando] = useState(null) // id do campo em edição
   const [trocouAba, setTrocouAba] = useState(false) // liga o fade entre abas depois da primeira troca
   const [compartilhando, setCompartilhando] = useState(false)
+  const [salvandoDestaque, setSalvandoDestaque] = useState(false)
+  const [erroDestaque, setErroDestaque] = useState('')
+  const [stats, setStats] = useState(null) // { interessados, visitas, realizadas }
+  const [leads, setLeads] = useState(() => lerCache('crm:leads') ?? [])
+  const [reduziuPreco, setReduziuPreco] = useState(false)
   const fotos = imovel.fotos ?? []
   const total = fotos.length
   const precos = precosDoImovel(imovel)
+  const destacado = ehDestaqueSite(imovel)
 
   const mudarAba = (id) => {
     setEditando(null)
@@ -57,6 +69,91 @@ export default function ImovelDetalhes({ imovel, corretores, corretor = '', exis
     window.addEventListener('keydown', aoTecla)
     return () => window.removeEventListener('keydown', aoTecla)
   }, [aba, editando, total, fechar, onFechar])
+
+  // Dados para relatório ao proprietário e match de leads
+  useEffect(() => {
+    let ativo = true
+    if (RECURSOS.relatorioProprietario) {
+      Promise.all([
+        supabase.from('lead_imovel').select('lead_id', { count: 'exact', head: true }).eq('imovel_id', imovel.id),
+        supabase.from('visitas').select('id, status').eq('imovel_id', imovel.id),
+      ]).then(([resVinc, resVis]) => {
+        if (!ativo) return
+        const listaVis = resVis.data ?? []
+        setStats({
+          interessados: resVinc.count ?? 0,
+          visitas: listaVis.length,
+          realizadas: listaVis.filter((v) => v.status === 'realizada').length,
+        })
+      })
+    }
+    if (RECURSOS.matchInteligente) {
+      Promise.all([
+        supabase.from('leads').select('*').in('status', ['novo', 'contato', 'visita', 'proposta']),
+        supabase.from('imovel_precos').select('*').eq('imovel_id', imovel.id).order('alterado_em', { ascending: false }).limit(6),
+      ]).then(([resLeads, resPrecos]) => {
+        if (!ativo) return
+        if (!resLeads.error && resLeads.data) setLeads(resLeads.data)
+        if (!resPrecos.error && resPrecos.data) setReduziuPreco(reduziuRecentemente(resPrecos.data, 7))
+      })
+    }
+    return () => {
+      ativo = false
+    }
+  }, [imovel.id, imovel.valor_venda, imovel.valor_aluguel])
+
+  const leadsCompativeis = useMemo(
+    () => (RECURSOS.matchInteligente ? leadsCompativeisComImovel(imovel, leads) : []),
+    [imovel, leads]
+  )
+
+  async function alternarDestaqueCapa() {
+    setErroDestaque('')
+    setSalvandoDestaque(true)
+    const novaLista = alternarDestaqueLista(imovel.caracteristicas ?? [])
+    const { data, error } = await supabase
+      .from('imoveis')
+      .update({ caracteristicas: novaLista })
+      .eq('id', imovel.id)
+      .select()
+      .single()
+    setSalvandoDestaque(false)
+    if (error) {
+      setErroDestaque(error.message)
+      return
+    }
+    invalidarCache('vitrine:')
+    onAtualizado(data)
+  }
+
+  function enviarRelatorioProprietario() {
+    const nomeProp = primeiroNome(imovel.proprietario_nome)
+    const saud = nomeProp ? `Olá, ${nomeProp}!` : 'Olá!'
+    const precoAtual = precos.map((p) => `${p.rotulo}: ${p.texto}`).join(' · ')
+    const s = stats ?? { interessados: 0, visitas: 0, realizadas: 0 }
+    const msg =
+      `${saud} Aqui é ${corretor || 'da equipe CRZ Imóveis'}.\n\n` +
+      `Segue o resumo de acompanhamento do seu imóvel *${comCodigo(imovel)}*` +
+      `${precoAtual ? ` (${precoAtual})` : ''}:\n` +
+      `• Clientes interessados com ficha apresentada: ${s.interessados}\n` +
+      `• Visitas registradas: ${s.visitas} (${s.realizadas} realizadas)\n\n` +
+      `Seguimos trabalhando na divulgação e atendimento dos interessados. Qualquer dúvida ou ajuste, fico à disposição!`
+    abrirWhatsapp(imovel.proprietario_telefone1, msg)
+  }
+
+  function avisarLeadMatch(lead) {
+    if (reduziuPreco) {
+      const nomeLead = primeiroNome(lead.nome)
+      const saud = nomeLead ? `Olá, ${nomeLead}!` : 'Olá!'
+      const precoAtual = precos.map((p) => `${p.rotulo}: ${p.texto}`).join(' · ')
+      const msg =
+        `${saud}${corretor ? ` Aqui é ${corretor}, corretor de imóveis.` : ''} ` +
+        `O imóvel *${comCodigo(imovel)}*${imovel.bairro ? ` (${imovel.bairro})` : ''} acabou de ter uma redução de preço` +
+        `${precoAtual ? ` e está por ${precoAtual}` : ''}. Como combina com o seu perfil, quer receber fotos ou agendar uma visita?`
+      return abrirWhatsapp(lead.telefone, msg)
+    }
+    abrirWhatsapp(lead.telefone, montarMensagem('apresentacao', { lead, imovel, corretor }))
+  }
 
   // outros imóveis do mesmo proprietário
   const outrosDoProprietario = imovel.proprietario_id ? existentes.filter((i) => i.proprietario_id === imovel.proprietario_id && i.id !== imovel.id) : []
@@ -143,6 +240,27 @@ export default function ImovelDetalhes({ imovel, corretores, corretor = '', exis
 
         <StatusImovel imovel={imovel} somenteLeitura={somenteLeitura} onAtualizado={onAtualizado} />
 
+        {RECURSOS.destaqueManualCapa && !somenteLeitura && (
+          <div className="destaque-capa-barra">
+            <button
+              type="button"
+              className={'pequeno btn-destaque-capa' + (destacado ? ' ativo' : '')}
+              disabled={salvandoDestaque}
+              onClick={alternarDestaqueCapa}
+            >
+              {salvandoDestaque
+                ? 'Salvando…'
+                : destacado
+                  ? '★ Em destaque na capa do site'
+                  : '☆ Destacar na capa do site'}
+            </button>
+            {destacado && !imovel.publicar_no_site && (
+              <span className="suave">(Ative “Mostrar no site” para aparecer na capa)</span>
+            )}
+            {erroDestaque && <span className="erro">{erroDestaque}</span>}
+          </div>
+        )}
+
         <div className="abas" role="tablist">
           {ABAS_IMOVEL.map((a) => (
             <button
@@ -222,8 +340,60 @@ export default function ImovelDetalhes({ imovel, corretores, corretor = '', exis
                 ))}
               </div>
             )}
+            {secao.id === 'proprietario' && RECURSOS.relatorioProprietario && (
+              <div className="relatorio-proprietario">
+                <span className="suave">
+                  Acompanhamento:{' '}
+                  {stats
+                    ? `${stats.interessados} ${stats.interessados === 1 ? 'interessado' : 'interessados'} · ${stats.visitas} ${stats.visitas === 1 ? 'visita' : 'visitas'} (${stats.realizadas} realizadas)`
+                    : 'carregando…'}
+                </span>
+                <button type="button" className="pequeno" onClick={enviarRelatorioProprietario}>
+                  📊 Relatório p/ proprietário (WhatsApp)
+                </button>
+              </div>
+            )}
           </section>
         ))}
+
+        {aba === 'principal' && RECURSOS.matchInteligente && imovel.status === 'disponivel' && (
+          <section className="secao secao-match-leads" aria-label="Leads compatíveis">
+            <h3>
+              🎯 Leads compatíveis com este imóvel
+              {reduziuPreco && <span className="etiqueta reducao-badge">Preço reduzido</span>}
+            </h3>
+            {leadsCompativeis.length === 0 ? (
+              <p className="suave">Nenhum lead ativo com perfil de busca compatível no momento.</p>
+            ) : (
+              <ul className="itens">
+                {leadsCompativeis.map(({ lead, motivos }) => {
+                  const etapa = ETAPAS.find((e) => e.id === lead.status)?.rotulo ?? lead.status
+                  return (
+                    <li key={lead.id} className="item-match">
+                      <div className="item-info">
+                        <strong>{lead.nome}</strong>
+                        <span className="suave">
+                          {etapa}
+                          {lead.telefone ? ` · ${lead.telefone}` : ''}
+                        </span>
+                        <div className="motivos-match">
+                          {motivos.map((m) => (
+                            <span key={m} className="etiqueta">{m}</span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="item-acoes">
+                        <button type="button" className="pequeno primario" onClick={() => avisarLeadMatch(lead)}>
+                          {reduziuPreco ? 'Avisar redução no WhatsApp' : 'Enviar no WhatsApp'}
+                        </button>
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </section>
+        )}
 
         {aba === 'principal' && <HistoricoPreco imovel={imovel} />}
       </div>

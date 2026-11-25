@@ -381,6 +381,7 @@ returns text language sql immutable as $$
     when 'casa' then 'CA'
     when 'terreno' then 'TE'
     when 'comercial' then 'LO'
+    when 'galpao' then 'GA'
     when 'rural' then 'RU'
     else 'OU'
   end

@@ -44,11 +44,18 @@ export function IconeVaga(props) {
   )
 }
 
-// Linha de ícones com dormitórios, banheiros e área (terreno entre parênteses, quando houver).
+// Linha de ícones com dormitórios, banheiros, vagas e área (terreno entre parênteses, quando houver).
 export function CaracteristicasImovel({ imovel }) {
   const itens = []
-  if (imovel.dormitorios) itens.push({ icone: <IconeCama />, valor: imovel.dormitorios })
+  if (imovel.dormitorios) {
+    itens.push({
+      icone: <IconeCama />,
+      valor: imovel.suites > 0 ? `${imovel.dormitorios} (${imovel.suites} suítes)` : imovel.dormitorios,
+    })
+  }
   if (imovel.banheiros) itens.push({ icone: <IconeChuveiro />, valor: imovel.banheiros })
+  const vagas = (imovel.vagas_cobertas ?? 0) + (imovel.vagas_descobertas ?? 0)
+  if (vagas > 0) itens.push({ icone: <IconeVaga />, valor: vagas })
   if (imovel.area_construida) {
     itens.push({
       icone: <IconeArea />,

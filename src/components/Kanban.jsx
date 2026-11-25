@@ -1,5 +1,6 @@
 import { Suspense, useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { supabase, ETAPAS } from '../lib/supabase.js'
+import { RECURSOS } from '../config.js'
 import { LeadModal, EtapaModal } from '../componentesPreguicosos.js'
 import { colunasDaEtapa, textoDoMotivo } from '../lib/etapa.js'
 import { useResponsaveis } from '../lib/responsaveis.js'
@@ -7,9 +8,10 @@ import Topo from './Topo.jsx'
 import { EsqueletoQuadro, EsqueletoLista } from './Esqueleto.jsx'
 import Toast from './Toast.jsx'
 import { linkWhatsapp } from '../lib/format.js'
-import { rotuloOrigem, quandoCurto, faixaDoDia } from '../lib/lead.js'
+import { rotuloOrigem, quandoCurto, faixaDoDia, statusEsfriando } from '../lib/lead.js'
 import { proximosPorLead } from '../lib/agenda.js'
 import { filtrarLeads } from '../lib/leadLista.js'
+import { lerCache, gravarCache } from '../lib/cache.js'
 import LeadLista from './LeadLista.jsx'
 import { useAvisos } from '../lib/avisosContexto.js'
 
@@ -22,11 +24,12 @@ const lerVisao = () => {
   }
 }
 
-export default function Kanban({ usuario, pagina, onPagina }) {
-  const [leads, setLeads] = useState([])
-  const [carregando, setCarregando] = useState(true)
+export default function Kanban({ usuario, pagina, onPagina, abrirLeadId = null, onLimparAlvo }) {
+  const [leads, setLeads] = useState(() => lerCache('crm:leads') ?? [])
+  const [carregando, setCarregando] = useState(() => !lerCache('crm:leads'))
   const [erro, setErro] = useState('')
   const [busca, setBusca] = useState('')
+  const [soEsfriando, setSoEsfriando] = useState(false)
   const [visao, setVisao] = useState(lerVisao) // 'quadro' | 'lista'
   // arrastar e soltar só funciona com mouse; no toque cada card tem o seletor "Mover para"
   const [podeArrastar] = useState(() => !globalThis.matchMedia || globalThis.matchMedia('(pointer: fine)').matches)
@@ -36,7 +39,7 @@ export default function Kanban({ usuario, pagina, onPagina }) {
   const [etapaPendente, setEtapaPendente] = useState(null) // { lead, status }: pede motivo (Perdido) ou dados do fechamento
   const [escopo, setEscopo] = useState('meus') // meus | todos (leads de outros que o usuário pode ver)
   const { nomeDe } = useResponsaveis()
-  const [proximos, setProximos] = useState({}) // { leadId: { visita, lembrete } }
+  const [proximos, setProximos] = useState(() => lerCache('crm:leads-proximos') ?? {}) // { leadId: { visita, lembrete } }
   const { recarregar: recarregarAvisos } = useAvisos() // lembretes/visitas criados na janela do lead atualizam o selo da Agenda
 
   const carregar = useCallback(async () => {
@@ -48,13 +51,16 @@ export default function Kanban({ usuario, pagina, onPagina }) {
     else {
       setErro('')
       setLeads(data)
+      gravarCache('crm:leads', data)
     }
     // selos de "retorno" e "visita" dos cards (se a migração 004 ainda não rodou, só não mostra os selos)
     const [vis, lem] = await Promise.all([
       supabase.from('visitas').select('lead_id, quando, status').eq('status', 'agendada'),
       supabase.from('lembretes').select('lead_id, quando, concluido').eq('concluido', false),
     ])
-    setProximos(proximosPorLead(vis.data ?? [], lem.data ?? []))
+    const prox = proximosPorLead(vis.data ?? [], lem.data ?? [])
+    setProximos(prox)
+    gravarCache('crm:leads-proximos', prox)
     setCarregando(false)
   }, [])
 
@@ -62,12 +68,41 @@ export default function Kanban({ usuario, pagina, onPagina }) {
     carregar()
   }, [carregar])
 
+  // Abertura direta vinda da busca global (Ctrl+K)
+  useEffect(() => {
+    if (!abrirLeadId || leads.length === 0) return
+    const alvo = leads.find((l) => l.id === abrirLeadId)
+    if (alvo) {
+      if ((alvo.responsavel_id ?? alvo.owner_id) !== usuario.id) setEscopo('todos')
+      setAberto({ lead: alvo, aba: 'dados' })
+    }
+    onLimparAlvo?.()
+  }, [abrirLeadId, leads, usuario.id, onLimparAlvo])
+
   // digitar na busca não trava no celular: a lista filtra logo depois, sem segurar o teclado
   const buscaAdiada = useDeferredValue(busca)
   const meu = (l) => (l.responsavel_id ?? l.owner_id) === usuario.id
   const temDeOutros = useMemo(() => leads.some((l) => (l.responsavel_id ?? l.owner_id) !== usuario.id), [leads, usuario.id])
   const visiveis = useMemo(() => (escopo === 'todos' ? leads : leads.filter((l) => (l.responsavel_id ?? l.owner_id) === usuario.id)), [leads, escopo, usuario.id])
-  const filtrados = useMemo(() => filtrarLeads(visiveis, { busca: buscaAdiada }), [visiveis, buscaAdiada])
+
+  const esfriandoPorLead = useMemo(() => {
+    if (!RECURSOS.alertaLeadEsfriando) return {}
+    const mapa = {}
+    for (const l of visiveis) mapa[l.id] = statusEsfriando(l, proximos[l.id])
+    return mapa
+  }, [visiveis, proximos])
+
+  const totalEsfriando = useMemo(
+    () => (RECURSOS.alertaLeadEsfriando ? visiveis.filter((l) => esfriandoPorLead[l.id]?.esfriando).length : 0),
+    [visiveis, esfriandoPorLead]
+  )
+
+  const filtrados = useMemo(() => {
+    const base = filtrarLeads(visiveis, { busca: buscaAdiada })
+    return soEsfriando && RECURSOS.alertaLeadEsfriando
+      ? base.filter((l) => esfriandoPorLead[l.id]?.esfriando)
+      : base
+  }, [visiveis, buscaAdiada, soEsfriando, esfriandoPorLead])
 
   function mudarVisao(nova) {
     setVisao(nova)
@@ -88,10 +123,13 @@ export default function Kanban({ usuario, pagina, onPagina }) {
     const colunas = { status: novoStatus, ...colunasDaEtapa(novoStatus, formEtapa) }
     const anterior = leads
     // atualização otimista; desfaz se o banco recusar
-    setLeads((ls) => ls.map((l) => (l.id === lead.id ? { ...l, ...colunas } : l)))
+    const atualizados = leads.map((l) => (l.id === lead.id ? { ...l, ...colunas } : l))
+    setLeads(atualizados)
+    gravarCache('crm:leads', atualizados)
     const { error } = await supabase.from('leads').update(colunas).eq('id', lead.id)
     if (error) {
       setLeads(anterior)
+      gravarCache('crm:leads', anterior)
       return error.message
     }
     return null
@@ -124,6 +162,17 @@ export default function Kanban({ usuario, pagina, onPagina }) {
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
         />
+        {RECURSOS.alertaLeadEsfriando && (totalEsfriando > 0 || soEsfriando) && (
+          <button
+            type="button"
+            className={'chip-filtro chip-esfriando' + (soEsfriando ? ' ativo' : '')}
+            aria-pressed={soEsfriando}
+            title="Filtrar leads ativos sem retorno ou visita marcada há 5+ dias"
+            onClick={() => setSoEsfriando((v) => !v)}
+          >
+            ⏳ Esfriando ({totalEsfriando})
+          </button>
+        )}
         {temDeOutros && (
           <div className="visoes" role="group" aria-label="Quais leads mostrar">
             <button type="button" className={escopo === 'meus' ? 'ativo' : ''} aria-pressed={escopo === 'meus'} onClick={() => setEscopo('meus')}>
@@ -187,7 +236,7 @@ export default function Kanban({ usuario, pagina, onPagina }) {
                       {lead.telefone && <span>{lead.telefone}</span>}
                       {lead.status === 'perdido' && lead.perdido_motivo && <span className="motivo-perda">{textoDoMotivo(lead)}</span>}
                       {!meu(lead) && <span className="responsavel-card">Responsável: {nomeDe(lead.responsavel_id ?? lead.owner_id) || '—'}</span>}
-                      <Selos proximo={proximos[lead.id]} />
+                      <Selos proximo={proximos[lead.id]} esfriandoInfo={esfriandoPorLead[lead.id]} />
                       <select
                         className="mover-etapa"
                         aria-label={`Mover ${lead.nome} para outra etapa`}
@@ -267,16 +316,23 @@ export default function Kanban({ usuario, pagina, onPagina }) {
   )
 }
 
-// Selos do card: retorno (vermelho se atrasado) e próxima visita
-function Selos({ proximo }) {
-  if (!proximo) return null
-  const atrasado = proximo.lembrete && faixaDoDia(proximo.lembrete) === 'atrasados'
+// Selos do card: retorno (vermelho se atrasado), próxima visita e alerta de lead esfriando
+function Selos({ proximo, esfriandoInfo }) {
+  const temProximo = proximo && (proximo.lembrete || proximo.visita)
+  const temEsfriando = esfriandoInfo?.esfriando
+  if (!temProximo && !temEsfriando) return null
+  const atrasado = proximo?.lembrete && faixaDoDia(proximo.lembrete) === 'atrasados'
   return (
     <div className="selos-lead">
-      {proximo.lembrete && (
+      {proximo?.lembrete && (
         <span className={'selo-lead' + (atrasado ? ' atrasado' : '')}>Retorno {quandoCurto(proximo.lembrete)}</span>
       )}
-      {proximo.visita && <span className="selo-lead visita">Visita {quandoCurto(proximo.visita)}</span>}
+      {proximo?.visita && <span className="selo-lead visita">Visita {quandoCurto(proximo.visita)}</span>}
+      {temEsfriando && (
+        <span className="selo-lead esfriando" title="Lead ativo sem compromisso agendado">
+          ⏳ {esfriandoInfo.dias}d sem retorno
+        </span>
+      )}
     </div>
   )
 }

@@ -255,3 +255,18 @@ export function montarMensagem(modelo, { lead, imovel = null, corretor = '', vis
       return abertura
   }
 }
+
+// Alerta de "lead esfriando": lead ainda em atendimento (novo, contato, visita, proposta),
+// sem compromisso futuro marcado e parado há pelo menos `diasLimite` dias.
+export function statusEsfriando(lead, proximo, agora = new Date(), diasLimite = 5) {
+  if (!lead || !['novo', 'contato', 'visita', 'proposta'].includes(lead.status)) {
+    return { esfriando: false, dias: 0 }
+  }
+  if (proximo?.lembrete || proximo?.visita) {
+    return { esfriando: false, dias: 0 }
+  }
+  const ref = lead.updated_at || lead.created_at
+  if (!ref) return { esfriando: false, dias: 0 }
+  const dias = Math.max(0, Math.floor((inicioDoDia(agora) - inicioDoDia(ref)) / DIA_MS))
+  return { esfriando: dias >= diasLimite, dias }
+}

@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /painel
+
+Sitemap: https://crznegociosimobiliarios.com.br/sitemap.xml

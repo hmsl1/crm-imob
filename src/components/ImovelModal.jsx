@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
+import { RECURSOS } from '../config.js'
 import {
   TIPOS_IMOVEL,
   FINALIDADES,
@@ -14,10 +15,13 @@ import {
   ABAS_IMOVEL,
   temVenda,
   temAluguel,
+  ehDestaqueSite,
+  alternarDestaqueLista,
   formDoImovel,
   payloadDoForm,
   validarImovel,
 } from '../lib/imovel.js'
+import { invalidarCache } from '../lib/cache.js'
 import { acharImoveisNoMesmoEndereco, enderecoMudou } from '../lib/duplicados.js'
 import AvisoDuplicado from './AvisoDuplicado.jsx'
 import { nomeDoEmail } from '../lib/format.js'
@@ -339,6 +343,7 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
     }
 
     if (!editando) limparRascunho(usuario.id)
+    invalidarCache('vitrine:')
     const removidas = (imovel?.fotos ?? []).filter((u) => !fotos.includes(u))
     if (removidas.length) apagarFotos(removidas).catch(() => {})
     fechar(onSalvo)
@@ -356,6 +361,7 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
       setErro(error.message)
       return
     }
+    invalidarCache('vitrine:')
     if (imovel.fotos?.length) apagarFotos(imovel.fotos).catch(() => {})
     fechar(onSalvo)
   }
@@ -477,6 +483,18 @@ export default function ImovelModal({ imovel, usuario, abaInicial, existentes = 
                   <input type="checkbox" {...marca('publicar_no_site')} />
                   Mostrar no site da imobiliária
                 </label>
+                {RECURSOS.destaqueManualCapa && (
+                  <label className="check">
+                    <input
+                      type="checkbox"
+                      checked={ehDestaqueSite(form)}
+                      onChange={() =>
+                        setForm((f) => ({ ...f, caracteristicas: alternarDestaqueLista(f.caracteristicas) }))
+                      }
+                    />
+                    ★ Destacar na capa do site (Imóveis selecionados)
+                  </label>
+                )}
                 <label>
                   Endereço (rua e número)
                   <input {...texto('endereco')} placeholder="Ex.: Rua das Flores, 123" />

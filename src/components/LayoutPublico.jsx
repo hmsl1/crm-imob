@@ -11,7 +11,7 @@ export default function LayoutPublico({ navegar, paginaAtiva = '', children }) {
     <div className="vitrine">
       <SiteTopo navegar={navegar} paginaAtiva={paginaAtiva} onAnuncie={() => setAnuncieAberto(true)} />
       {children}
-      <SiteRodape />
+      <SiteRodape navegar={navegar} />
       <BotaoWhatsappFlutuante />
       {anuncieAberto && <AnuncieModal onFechar={() => setAnuncieAberto(false)} />}
     </div>

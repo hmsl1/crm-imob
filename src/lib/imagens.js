@@ -32,9 +32,14 @@ async function aplicarMarcaDagua(ctx, largura, altura) {
   ctx.restore()
 }
 
-// Reduz a foto no navegador antes de enviar: o plano grátis tem 1 GB de Storage.
-// Uma foto de celular (4–8 MB) vira ~200–400 KB. "marcaDagua: true" é usado nas fotos dos imóveis
-// (protege contra cópia por outros sites); a imagem de capa do site, por exemplo, não usa isso.
+function canvasParaBlob(canvas, tipo, qualidade) {
+  return new Promise((ok) => canvas.toBlob((blob) => ok(blob), tipo, qualidade))
+}
+
+// Reduz a foto no navegador antes de enviar: converte para WebP (menor peso com ótima qualidade)
+// com fallback automático para JPEG se o navegador não gerar WebP em canvas.
+// "marcaDagua: true" é usado nas fotos dos imóveis (protege contra cópia por outros sites);
+// a imagem de capa do site, por exemplo, não usa isso.
 export async function comprimirImagem(arquivo, { ladoMax = 1600, qualidade = 0.82, marcaDagua = false } = {}) {
   let bitmap
   try {
@@ -55,22 +60,23 @@ export async function comprimirImagem(arquivo, { ladoMax = 1600, qualidade = 0.8
 
   if (marcaDagua) await aplicarMarcaDagua(ctx, largura, altura)
 
-  return new Promise((ok, falha) =>
-    canvas.toBlob(
-      (blob) => (blob ? ok(blob) : falha(new Error('não foi possível processar a imagem'))),
-      'image/jpeg',
-      qualidade
-    )
-  )
+  const webp = await canvasParaBlob(canvas, 'image/webp', qualidade)
+  if (webp && webp.type === 'image/webp') return webp
+
+  const jpeg = await canvasParaBlob(canvas, 'image/jpeg', qualidade)
+  if (jpeg) return jpeg
+  throw new Error('não foi possível processar a imagem')
 }
 
-// Envia para <id do usuário>/<uuid>.jpg e devolve a URL pública
+// Envia para <id do usuário>/<uuid>.webp (ou .jpg) e devolve a URL pública
 export async function enviarFoto(arquivo, donoId, opcoes) {
   const blob = await comprimirImagem(arquivo, opcoes)
-  const caminho = `${donoId}/${crypto.randomUUID()}.jpg`
+  const ehWebp = blob.type === 'image/webp'
+  const ext = ehWebp ? 'webp' : 'jpg'
+  const caminho = `${donoId}/${crypto.randomUUID()}.${ext}`
   const { error } = await supabase.storage
     .from(BUCKET)
-    .upload(caminho, blob, { contentType: 'image/jpeg', cacheControl: '31536000' })
+    .upload(caminho, blob, { contentType: blob.type || 'image/jpeg', cacheControl: '31536000' })
   if (error) throw error
   return supabase.storage.from(BUCKET).getPublicUrl(caminho).data.publicUrl
 }

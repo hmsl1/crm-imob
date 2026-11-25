@@ -1,27 +1,44 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
+import { RECURSOS } from '../config.js'
 import { linkImovel, linkVitrine, linkBuscaImoveis } from '../lib/rota.js'
 import { chaveBairro } from '../lib/bairros.js'
-import { precosDoImovel, linkWhatsapp, telefoneExibicao } from '../lib/format.js'
+import { ehDestaqueSite } from '../lib/imovel.js'
+import { precosDoImovel, linkWhatsapp } from '../lib/format.js'
 import { idsDeVideos } from '../lib/videosSite.js'
 import { useContatoSite } from '../lib/useContatoSite.js'
-import { CaracteristicasImovel } from './IconesImovel.jsx'
+import { useVitrineImoveis } from '../lib/useVitrineImoveis.js'
+import { lerCache, gravarCache } from '../lib/cache.js'
 import BuscaImoveis from './BuscaImoveis.jsx'
 import LayoutPublico from './LayoutPublico.jsx'
 import ImovelStories from './ImovelStories.jsx'
+import CardImovel from './CardImovel.jsx'
+import { EsqueletoGrade } from './Esqueleto.jsx'
 
-const FILTROS_VAZIOS = { busca: '', tipo: '', finalidade: '', cidade: '', bairro: '', condominio: '', valorMin: '', valorMax: '' }
+const FILTROS_VAZIOS = {
+  busca: '',
+  tipo: '',
+  finalidade: '',
+  cidade: '',
+  bairro: '',
+  condominio: '',
+  valorMin: '',
+  valorMax: '',
+  quartosMin: '',
+  vagasMin: '',
+  caracteristicas: [],
+  soFavoritos: false,
+}
 const TAGLINE_PADRAO = 'O imóvel certo, do jeito certo.'
 // Banner padrão do topo, usado enquanto não houver uma imagem cadastrada em "hero_imagem_url".
 const BANNER_PADRAO = '/banner-hero.jpg'
 
-// Página inicial do site público: a "vitrine" propriamente dita — capa, busca, destaques,
-// imóveis por bairro e as seções que só aparecem quando o dono preenche o conteúdo (Sobre,
-// depoimentos, vídeos e Instagram nunca mostram texto inventado).
+// Página inicial do site público: capa, busca flutuante, stories de destaques,
+// imóveis selecionados (priorizando destaques), imóveis por bairro e seções configuradas pelo dono.
 export default function Inicio({ navegar }) {
-  const [imoveis, setImoveis] = useState([])
-  const [bairros, setBairros] = useState([])
-  const [depoimentos, setDepoimentos] = useState([])
+  const { imoveis, carregando } = useVitrineImoveis()
+  const [bairros, setBairros] = useState(() => lerCache('vitrine:bairros') ?? [])
+  const [depoimentos, setDepoimentos] = useState(() => lerCache('vitrine:depoimentos') ?? [])
   const [filtros, setFiltros] = useState(FILTROS_VAZIOS)
   const [storyAberto, setStoryAberto] = useState(null) // código do imóvel aberto no pop-up de stories
   const trilhaRef = useRef(null)
@@ -34,24 +51,33 @@ export default function Inicio({ navegar }) {
   useEffect(() => {
     let ativo = true
     supabase
-      .from('vitrine_imoveis')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .then(({ data }) => ativo && setImoveis(data ?? []))
-    supabase
       .from('vitrine_bairros')
       .select('*')
-      .then(({ data }) => ativo && setBairros(data ?? []))
+      .then(({ data }) => {
+        if (!ativo || !data) return
+        gravarCache('vitrine:bairros', data)
+        setBairros(data)
+      })
     supabase
       .from('vitrine_depoimentos')
       .select('*')
-      .then(({ data }) => ativo && setDepoimentos(data ?? []))
+      .then(({ data }) => {
+        if (!ativo || !data) return
+        gravarCache('vitrine:depoimentos', data)
+        setDepoimentos(data)
+      })
     return () => {
       ativo = false
     }
   }, [])
 
-  const destaques = imoveis.slice(0, 6)
+  const destaques = useMemo(() => {
+    if (!RECURSOS.destaqueManualCapa) return imoveis.slice(0, 6)
+    const marcados = imoveis.filter(ehDestaqueSite)
+    const restantes = imoveis.filter((i) => !ehDestaqueSite(i))
+    return [...marcados, ...restantes].slice(0, 6)
+  }, [imoveis])
+
   const videos = idsDeVideos(contato?.videos_site)
   const whatsapp = contato?.whatsapp ?? null
   const linkFalarEquipe = whatsapp ? linkWhatsapp(whatsapp, 'Olá, não encontrei o que eu procurava no site. Pode me ajudar?') : null
@@ -140,7 +166,14 @@ export default function Inicio({ navegar }) {
         <ImovelStories codigo={storyAberto} navegar={navegar} linkImovel={linkImovel} aoFechar={() => setStoryAberto(null)} />
       )}
 
-      {destaques.length > 0 && (
+      {carregando && imoveis.length === 0 ? (
+        <section className="secao-vitrine">
+          <div className="titulo-secao">
+            <h2>Imóveis selecionados</h2>
+          </div>
+          <EsqueletoGrade itens={3} />
+        </section>
+      ) : destaques.length > 0 && (
         <section className="secao-vitrine">
           <div className="titulo-secao">
             <h2>Imóveis selecionados</h2>
@@ -149,40 +182,14 @@ export default function Inicio({ navegar }) {
             </button>
           </div>
           <div className="grade-imoveis">
-            {destaques.map((i) => {
-              const precos = precosDoImovel(i)
-              return (
-                <article key={i.id} className="imovel" onClick={() => navegar(linkImovel(i.codigo))}>
-                  <div className="foto">
-                    {i.nome_condominio && <span className="selo-condominio">{i.nome_condominio}</span>}
-                    {i.foto_capa ? <img src={i.foto_capa} alt={i.titulo} loading="lazy" decoding="async" /> : <span>Sem foto</span>}
-                    {i.total_fotos > 1 && <span className="selo-fotos">{i.total_fotos} fotos</span>}
-                  </div>
-                  <div className="corpo">
-                    <span className="codigo-imovel">{i.codigo}</span>
-                    <strong>{i.titulo}</strong>
-                    <span className="detalhes">{[i.bairro, i.cidade].filter(Boolean).join(' · ')}</span>
-                    <CaracteristicasImovel imovel={i} />
-                    <div className="corpo-divisoria" />
-                    <div className="corpo-rodape">
-                      {precos.length === 0 ? (
-                        <span className="preco">
-                          <small>Consulte o valor</small>
-                        </span>
-                      ) : (
-                        precos.map((p) => (
-                          <span className="preco" key={p.id}>
-                            {precos.length > 1 && <small>{p.rotulo} </small>}
-                            {p.texto}
-                          </span>
-                        ))
-                      )}
-                      <span className="link ver-detalhes">Ver detalhes →</span>
-                    </div>
-                  </div>
-                </article>
-              )
-            })}
+            {destaques.map((i, idx) => (
+              <CardImovel
+                key={i.id}
+                imovel={i}
+                prioridadeFoto={idx < 3}
+                onAbrir={(codigo) => navegar(linkImovel(codigo))}
+              />
+            ))}
           </div>
         </section>
       )}
