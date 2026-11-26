@@ -53,7 +53,7 @@ create unique index if not exists corretores_proprio_unico on corretores (owner_
 
 create table if not exists imoveis (
   id uuid primary key default gen_random_uuid(),
-  codigo text,                                 -- preenchido pelo gatilho; nunca muda
+  codigo text,                                 -- preenchido pelo gatilho; muda só se o tipo do imóvel mudar
   owner_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   captador_id uuid references corretores(id) on delete set null,
   titulo text not null,
@@ -393,9 +393,12 @@ declare
   p text;
   n integer;
 begin
-  if tg_op = 'UPDATE' then
-    new.codigo := old.codigo;   -- o código nunca muda
-  elsif new.codigo is null then
+  if tg_op = 'UPDATE' and new.tipo is not distinct from old.tipo then
+    new.codigo := old.codigo;   -- tipo não mudou: código continua o mesmo
+  elsif new.codigo is null or (tg_op = 'UPDATE' and new.tipo is distinct from old.tipo) then
+    -- Tipo mudou (ex.: casa virou terreno): gera um código novo com o prefixo certo. Pega um
+    -- número novo do contador do prefixo novo (em vez de só trocar a letra), porque o número já
+    -- usado no prefixo antigo pode já existir em outro imóvel do prefixo novo.
     p := public.prefixo_do_imovel(new.tipo);
     insert into public.imoveis_codigo_contadores as c (prefixo, ultimo) values (p, 1)
       on conflict (prefixo) do update set ultimo = c.ultimo + 1
